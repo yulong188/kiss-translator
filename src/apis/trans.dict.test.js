@@ -157,4 +157,32 @@ describe("handleDict", () => {
     expect(chunks).toEqual(["## library\n", "## library\nA place for books."]);
     expect(result).toBe("## library\nA place for books.");
   });
+
+  test("finishes immediately when an OpenAI-compatible stream reports completion", async () => {
+    fetchStream.mockImplementation(async function* () {
+      yield JSON.stringify({
+        choices: [{ delta: { content: "library" }, finish_reason: null }],
+      });
+      yield JSON.stringify({
+        choices: [{ delta: {}, finish_reason: "stop" }],
+      });
+      throw new Error("stream should not be read after finish_reason");
+    });
+    getStreamDelta.mockReturnValueOnce("## library\nA place for books.");
+
+    const chunks = [];
+    const result = await handleDict({
+      text: "library",
+      from: "English",
+      to: "Simplified Chinese",
+      fromLang: "en",
+      toLang: "zh-CN",
+      apiSetting: openaiApi,
+      onStreamChunk: (chunk) => chunks.push(chunk.markdown),
+    });
+
+    expect(result).toBe("## library\nA place for books.");
+    expect(chunks).toEqual(["## library\nA place for books."]);
+    expect(fetchData).not.toHaveBeenCalled();
+  });
 });

@@ -1824,12 +1824,26 @@ export const handleDict = async ({
         try {
           const json = JSON.parse(rawData);
           const delta = getStreamDelta(json, apiType);
-          if (!delta) continue;
+          if (delta) {
+            fullContent += delta;
+            // 流式模型可能先输出 Markdown 代码围栏，边流式展示边剥离可避免 UI 闪出 ```。
+            fullContent = stripMarkdownCodeBlock(fullContent, true);
+            onStreamChunk({ markdown: fullContent });
+          }
 
-          fullContent += delta;
-          // 流式模型可能先输出 Markdown 代码围栏，边流式展示边剥离可避免 UI 闪出 ```。
-          fullContent = stripMarkdownCodeBlock(fullContent, true);
-          onStreamChunk({ markdown: fullContent });
+          // 大多数 OpenAI 兼容接口（包括 DeepSeek）会先发 finish_reason，
+          // 再发 [DONE] 或稍后才关闭连接。识别完成事件后立即收尾，不继续等长连接。
+          const streamCompleted =
+            json.choices?.some(
+              (choice) =>
+                choice?.finish_reason !== null &&
+                choice?.finish_reason !== undefined
+            ) ||
+            json.type === "message_stop" ||
+            json.event_type === "interaction.complete" ||
+            json.type === "interaction.complete" ||
+            json.candidates?.some((candidate) => candidate?.finishReason);
+          if (streamCompleted) break;
         } catch (error) {
           if (error?.isAIStreamTerminal) throw error;
           // 忽略单个 SSE 数据帧解析失败，等待后续帧继续输出。

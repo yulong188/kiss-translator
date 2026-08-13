@@ -106,6 +106,7 @@ describe("TradeTermCont", () => {
     const { container, root } = renderTradeTermCont();
     await flushEffects();
     expect(container.textContent).toContain("PVC hose");
+    expect(container.querySelector('[role="progressbar"]')).toBeNull();
 
     await act(async () => {
       resolveRequest("**推荐表达**：`PVC hose`\n\n完整解释");
@@ -114,5 +115,39 @@ describe("TradeTermCont", () => {
     expect(container.textContent).toContain("完整解释");
 
     act(() => root.unmount());
+  });
+
+  test("batches rapid stream chunks and still renders the final result", async () => {
+    jest.useFakeTimers();
+    let resolveRequest;
+    apiDict.mockImplementationOnce(
+      ({ onStreamChunk }) =>
+        new Promise((resolve) => {
+          resolveRequest = resolve;
+          onStreamChunk({ markdown: "first" });
+          onStreamChunk({ markdown: "second" });
+          onStreamChunk({ markdown: "third" });
+        })
+    );
+
+    const { container, root } = renderTradeTermCont();
+    await flushEffects();
+    expect(container.textContent).toContain("first");
+    expect(container.textContent).not.toContain("third");
+
+    await act(async () => {
+      jest.advanceTimersByTime(50);
+      await Promise.resolve();
+    });
+    expect(container.textContent).toContain("third");
+
+    await act(async () => {
+      resolveRequest("final result");
+      await Promise.resolve();
+    });
+    expect(container.textContent).toContain("final result");
+
+    act(() => root.unmount());
+    jest.useRealTimers();
   });
 });

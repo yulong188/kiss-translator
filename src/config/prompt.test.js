@@ -462,6 +462,8 @@ describe("prompt settings", () => {
     expect(prompt.systemPrompt).toContain(
       "products serving the same or a similar purpose"
     );
+    expect(prompt.systemPrompt).toContain("within 350 Chinese characters");
+    expect(prompt.systemPrompt).toContain("never exceed 4");
     expect(prompt.systemPrompt).not.toContain("### 易混辨析");
     expect(prompt.userPrompt).toContain("Surrounding paragraph:");
     expect(UI_LANGS.every(([lang]) => I18N[prompt.nameKey]?.[lang])).toBe(true);

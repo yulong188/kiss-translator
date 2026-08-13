@@ -259,7 +259,7 @@ describe("TranForm translation service selection", () => {
         context: "聚氯乙烯软管适用于工业输水。",
         apiSetting: expect.objectContaining({
           apiSlug: "DeepSeek",
-          maxTokens: 900,
+          maxTokens: 400,
           dictPrompt: expect.stringContaining("PVC = polyvinyl chloride"),
         }),
       })

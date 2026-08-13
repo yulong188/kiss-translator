@@ -237,7 +237,11 @@ export default function TranForm({
 
     return {
       ...apiSetting,
-      maxTokens: Math.max(Number(apiSetting.maxTokens) || 0, 900),
+      // 优先尊重用户较小的输出配置，同时将学习卡限制在 300-550 tokens。
+      maxTokens: Math.min(
+        Math.max(Number(apiSetting.maxTokens) || 450, 300),
+        550
+      ),
       dictPromptSlug: prompt.slug,
       dictPrompt: prompt.systemPrompt,
       dictUserPrompt: prompt.userPrompt,

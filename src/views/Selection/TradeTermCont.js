@@ -51,8 +51,28 @@ export default function TradeTermCont({
       apiSettingKey,
       context,
     });
+    let streamRenderTimer = null;
+    let latestStreamMarkdown = "";
+    let hasRenderedFirstChunk = false;
     const handleStreamChunk = ({ markdown: chunkMarkdown }) => {
-      if (active && chunkMarkdown) setMarkdown(chunkMarkdown);
+      if (!active || !chunkMarkdown) return;
+
+      latestStreamMarkdown = chunkMarkdown;
+      // 首个可读分片立即上屏；后续小分片合并刷新，避免每个 token
+      // 都重新解析和渲染整张 Markdown 卡片。
+      if (!hasRenderedFirstChunk) {
+        hasRenderedFirstChunk = true;
+        setMarkdown(chunkMarkdown);
+        setLoading(false);
+        return;
+      }
+
+      if (!streamRenderTimer) {
+        streamRenderTimer = setTimeout(() => {
+          streamRenderTimer = null;
+          if (active) setMarkdown(latestStreamMarkdown);
+        }, 50);
+      }
     };
 
     (async () => {
@@ -66,6 +86,7 @@ export default function TradeTermCont({
           pending = {
             subscribers: new Set(),
             promise: null,
+            latestMarkdown: "",
           };
           pending.subscribers.add(handleStreamChunk);
           pendingRequests.set(requestKey, pending);
@@ -76,15 +97,23 @@ export default function TradeTermCont({
             apiSetting,
             context,
             onStreamChunk: (chunk) => {
+              pending.latestMarkdown = chunk.markdown || "";
               pending.subscribers.forEach((subscriber) => subscriber(chunk));
             },
           }).finally(() => pendingRequests.delete(requestKey));
         } else {
           pending.subscribers.add(handleStreamChunk);
+          if (pending.latestMarkdown) {
+            handleStreamChunk({ markdown: pending.latestMarkdown });
+          }
         }
 
         const result = await pending.promise;
-        if (active) setMarkdown(result);
+        if (active) {
+          clearTimeout(streamRenderTimer);
+          streamRenderTimer = null;
+          setMarkdown(result);
+        }
       } catch (err) {
         if (err?.name !== "AbortError" && active) setError(err.message);
       } finally {
@@ -94,6 +123,7 @@ export default function TradeTermCont({
 
     return () => {
       active = false;
+      clearTimeout(streamRenderTimer);
       const pending = pendingRequests.get(requestKey);
       pending?.subscribers.delete(handleStreamChunk);
     };
@@ -114,7 +144,7 @@ export default function TradeTermCont({
           <Typography variant="subtitle2" fontWeight={700}>
             {i18n("trade_term_learning")}
           </Typography>
-          {loading && <CircularProgress size={12} />}
+          {loading && !markdown && <CircularProgress size={12} />}
         </Stack>
         <CopyBtn text={markdown} title={i18n("copy")} />
       </Stack>
