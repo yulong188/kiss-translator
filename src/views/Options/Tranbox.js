@@ -18,6 +18,7 @@ import {
   OPT_SUG_ALL,
   OPT_SUG_YOUDAO,
   PROMPT_MODE_FOLLOW_API,
+  DEFAULT_TRADE_TERM_PROMPT_SLUG,
   getDictionaryPromptOptions,
   getPromptDisplayName,
   OPT_SKIPLANGS_SELECTION,
@@ -49,7 +50,6 @@ export default function Tranbox() {
     () => getDictionaryPromptOptions(prompts),
     [prompts]
   );
-
   // 基础表单输入值变动处理
   const handleChange = (e) => {
     e.preventDefault();
@@ -103,9 +103,36 @@ export default function Tranbox() {
     enSug = OPT_SUG_YOUDAO,
     aiDictApiSlug = "-",
     aiDictPromptSlug = PROMPT_MODE_FOLLOW_API,
+    tradeTermLearning = true,
+    tradeTermApiSlug = "DeepSeek",
+    tradeTermPromptSlug = DEFAULT_TRADE_TERM_PROMPT_SLUG,
     blacklist = "",
     skipLangs = [],
   } = tranboxSetting;
+  const tradeTermApiOptions = useMemo(() => {
+    if (aiEnabledApis.some(({ apiSlug }) => apiSlug === tradeTermApiSlug)) {
+      return aiEnabledApis;
+    }
+    return tradeTermApiSlug && tradeTermApiSlug !== "-"
+      ? [
+          ...aiEnabledApis,
+          { apiSlug: tradeTermApiSlug, apiName: tradeTermApiSlug },
+        ]
+      : aiEnabledApis;
+  }, [aiEnabledApis, tradeTermApiSlug]);
+  const tradeTermPromptOptions = useMemo(() => {
+    if (
+      dictionaryPromptOptions.some(({ slug }) => slug === tradeTermPromptSlug)
+    ) {
+      return dictionaryPromptOptions;
+    }
+    return tradeTermPromptSlug
+      ? [
+          ...dictionaryPromptOptions,
+          { slug: tradeTermPromptSlug, name: tradeTermPromptSlug },
+        ]
+      : dictionaryPromptOptions;
+  }, [dictionaryPromptOptions, tradeTermPromptSlug]);
 
   return (
     <Box>
@@ -333,6 +360,60 @@ export default function Tranbox() {
                 ))}
               </TextField>
             </Grid>
+            <Grid item xs={12} sm={12} md={6} lg={3}>
+              <TextField
+                fullWidth
+                select
+                size="small"
+                name="tradeTermLearning"
+                value={tradeTermLearning}
+                label={i18n("trade_term_learning")}
+                helperText={i18n("trade_term_learning_helper")}
+                onChange={handleChange}
+              >
+                <MenuItem value={false}>{i18n("disable")}</MenuItem>
+                <MenuItem value={true}>{i18n("enable")}</MenuItem>
+              </TextField>
+            </Grid>
+            {tradeTermLearning && (
+              <>
+                <Grid item xs={12} sm={12} md={6} lg={3}>
+                  <TextField
+                    fullWidth
+                    select
+                    size="small"
+                    name="tradeTermApiSlug"
+                    value={tradeTermApiSlug}
+                    label={i18n("trade_term_api")}
+                    onChange={handleChange}
+                  >
+                    <MenuItem value={"-"}>{i18n("disable")}</MenuItem>
+                    {tradeTermApiOptions.map((api) => (
+                      <MenuItem value={api.apiSlug} key={api.apiSlug}>
+                        {api.apiName}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+                <Grid item xs={12} sm={12} md={6} lg={3}>
+                  <TextField
+                    fullWidth
+                    select
+                    size="small"
+                    name="tradeTermPromptSlug"
+                    value={tradeTermPromptSlug}
+                    label={i18n("trade_term_prompt")}
+                    onChange={handleChange}
+                  >
+                    {tradeTermPromptOptions.map((prompt) => (
+                      <MenuItem value={prompt.slug} key={prompt.slug}>
+                        {getPromptDisplayName(prompt, i18n)}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+              </>
+            )}
             {/* 划词翻译框的触发模式 (点击小球触发、选中直接触发、或者带辅助按键) */}
             <Grid item xs={12} sm={12} md={6} lg={3}>
               <TextField

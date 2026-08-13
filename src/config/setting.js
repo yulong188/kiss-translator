@@ -11,10 +11,12 @@ import {
   OPT_TRANS_MICROSOFT,
   DEFAULT_API_LIST,
   OPT_LANGS_TO,
+  OPT_TRANS_DEEPSEEK,
 } from "./api";
 import {
   CURRENT_SETTINGS_VERSION,
   DEFAULT_SUBTITLE_PROMPT_SLUG,
+  DEFAULT_TRADE_TERM_PROMPT_SLUG,
   PROMPT_MODE_FOLLOW_API,
 } from "./prompt";
 import { GLOBAL_KEY } from "./rules";
@@ -150,6 +152,9 @@ export const DEFAULT_TRANBOX_SETTING = {
   enSug: OPT_SUG_YOUDAO, // 英文输入联想建议源
   aiDictApiSlug: "-",
   aiDictPromptSlug: PROMPT_MODE_FOLLOW_API,
+  tradeTermLearning: true,
+  tradeTermApiSlug: OPT_TRANS_DEEPSEEK,
+  tradeTermPromptSlug: DEFAULT_TRADE_TERM_PROMPT_SLUG,
 };
 
 // --- 字幕默认样式属性 ---

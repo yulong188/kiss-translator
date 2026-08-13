@@ -10,6 +10,8 @@ import {
   defaultDictPromptEnRu,
   defaultDictPromptEnVi,
   defaultDictUserPrompt,
+  defaultTradeEnglishPrompt,
+  defaultTradeEnglishUserPrompt,
   defaultSubtitlePrompt,
   API_SPE_TYPES,
   GEMINI_GENERATE_CONTENT_URL,
@@ -27,6 +29,7 @@ export const PROMPT_SLUG_DICTIONARY_EN_JA = "dictionary-en-ja";
 export const PROMPT_SLUG_DICTIONARY_EN_KO = "dictionary-en-ko";
 export const PROMPT_SLUG_DICTIONARY_EN_VI = "dictionary-en-vi";
 export const PROMPT_SLUG_DICTIONARY_EN_RU = "dictionary-en-ru";
+export const PROMPT_SLUG_TRADE_ENGLISH = "trade-english-learning";
 
 // 提示词应用模式：跟随接口内部配置，或使用全局统一配置
 export const PROMPT_MODE_FOLLOW_API = "follow_api";
@@ -50,6 +53,7 @@ export const DEFAULT_NOBATCH_PROMPT_SLUG = PROMPT_SLUG_NOBATCH_TRANSLATION;
 export const DEFAULT_BATCH_PROMPT_SLUG = PROMPT_SLUG_BATCH_TRANSLATION_JSON;
 export const DEFAULT_SUBTITLE_PROMPT_SLUG = PROMPT_SLUG_SUBTITLE_SEGMENTATION;
 export const DEFAULT_DICTIONARY_PROMPT_SLUG = PROMPT_SLUG_DICTIONARY_EN_ZH;
+export const DEFAULT_TRADE_TERM_PROMPT_SLUG = PROMPT_SLUG_TRADE_ENGLISH;
 
 // 配置数据结构的版本号（用于检测并执行数据迁移升级逻辑）
 export const SETTINGS_VERSION_V1 = 1;
@@ -141,6 +145,14 @@ export const PRESET_PROMPTS = [
     name: "AI English-Russian Dictionary",
     systemPrompt: defaultDictPromptEnRu,
     userPrompt: defaultDictUserPrompt,
+  },
+  {
+    slug: PROMPT_SLUG_TRADE_ENGLISH,
+    category: PROMPT_CATEGORY_DICTIONARY,
+    nameKey: "preset_prompt_trade_english",
+    name: "Foreign Trade English Learning Card",
+    systemPrompt: defaultTradeEnglishPrompt,
+    userPrompt: defaultTradeEnglishUserPrompt,
   },
 ];
 
@@ -848,11 +860,17 @@ export function removePromptReferences(setting = {}, promptSlug) {
     "aiDictPromptSlug",
     promptSlug
   );
+  const hasTradeTermPromptReference = hasPromptReference(
+    setting?.tranboxSetting,
+    "tradeTermPromptSlug",
+    promptSlug
+  );
 
   if (
     !hasApiChanges &&
     !hasSubtitlePromptReference &&
-    !hasTranboxDictPromptReference
+    !hasTranboxDictPromptReference &&
+    !hasTradeTermPromptReference
   ) {
     return setting;
   }
@@ -875,6 +893,13 @@ export function removePromptReferences(setting = {}, promptSlug) {
     nextSetting.tranboxSetting = {
       ...(setting?.tranboxSetting || {}),
       aiDictPromptSlug: PROMPT_MODE_FOLLOW_API,
+    };
+  }
+
+  if (hasTradeTermPromptReference) {
+    nextSetting.tranboxSetting = {
+      ...(nextSetting.tranboxSetting || setting?.tranboxSetting || {}),
+      tradeTermPromptSlug: DEFAULT_TRADE_TERM_PROMPT_SLUG,
     };
   }
 

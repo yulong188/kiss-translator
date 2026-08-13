@@ -26,6 +26,10 @@ import { useTheme, alpha } from "@mui/material/styles";
 import Logo from "../../components/Logo";
 import { isValidWord } from "../../libs/utils";
 import { useDarkMode } from "../../hooks/ColorMode";
+import {
+  DEFAULT_TRADE_TERM_PROMPT_SLUG,
+  OPT_TRANS_DEEPSEEK,
+} from "../../config";
 
 /**
  * 划词翻译框的顶部导航栏组件
@@ -359,6 +363,9 @@ function TranBoxContent({
   enSug,
   aiDictApiSlug,
   aiDictPromptSlug,
+  tradeTermLearning,
+  tradeTermApiSlug,
+  tradeTermPromptSlug,
   prompts,
   selectionContext,
 }) {
@@ -420,6 +427,9 @@ function TranBoxContent({
         enSug={enSug}
         aiDictApiSlug={aiDictApiSlug}
         aiDictPromptSlug={aiDictPromptSlug}
+        tradeTermLearning={tradeTermLearning}
+        tradeTermApiSlug={tradeTermApiSlug}
+        tradeTermPromptSlug={tradeTermPromptSlug}
         selectionContext={selectionContext}
       />
     </Box>
@@ -491,6 +501,16 @@ export default function TranBox(props) {
               enSug={props.tranboxSetting.enSug}
               aiDictApiSlug={props.tranboxSetting.aiDictApiSlug}
               aiDictPromptSlug={props.tranboxSetting.aiDictPromptSlug}
+              tradeTermLearning={
+                props.tranboxSetting.tradeTermLearning !== false
+              }
+              tradeTermApiSlug={
+                props.tranboxSetting.tradeTermApiSlug || OPT_TRANS_DEEPSEEK
+              }
+              tradeTermPromptSlug={
+                props.tranboxSetting.tradeTermPromptSlug ||
+                DEFAULT_TRADE_TERM_PROMPT_SLUG
+              }
               selectionContext={props.selectionContext}
             />
           </DraggableResizable>

@@ -5,7 +5,8 @@ import {
   DEFAULT_SUBTITLE_SETTING,
   DEFAULT_TRANBOX_SETTING,
 } from "./setting";
-import { OPT_TRANS_MICROSOFT } from "./api";
+import { OPT_TRANS_DEEPSEEK, OPT_TRANS_MICROSOFT } from "./api";
+import { DEFAULT_TRADE_TERM_PROMPT_SLUG } from "./prompt";
 import { GLOBAL_KEY } from "./rules";
 
 describe("translation box defaults", () => {
@@ -25,6 +26,14 @@ describe("translation box defaults", () => {
 
   test("does not ignore any language by default", () => {
     expect(DEFAULT_TRANBOX_SETTING.skipLangs).toEqual([]);
+  });
+
+  test("enables the DeepSeek foreign-trade learning card by default", () => {
+    expect(DEFAULT_TRANBOX_SETTING.tradeTermLearning).toBe(true);
+    expect(DEFAULT_TRANBOX_SETTING.tradeTermApiSlug).toBe(OPT_TRANS_DEEPSEEK);
+    expect(DEFAULT_TRANBOX_SETTING.tradeTermPromptSlug).toBe(
+      DEFAULT_TRADE_TERM_PROMPT_SLUG
+    );
   });
 
   test("follows the current page rule for hover bubbles by default", () => {

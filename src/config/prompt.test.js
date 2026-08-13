@@ -9,6 +9,7 @@ import {
   PROMPT_SLUG_DICTIONARY_EN_KO,
   PROMPT_SLUG_DICTIONARY_EN_RU,
   PROMPT_SLUG_DICTIONARY_EN_VI,
+  PROMPT_SLUG_TRADE_ENGLISH,
   PROMPT_MODE_FOLLOW_API,
   PROMPT_MODE_GLOBAL,
   PROMPT_TEMPLATE_CATEGORIES,
@@ -37,6 +38,8 @@ import {
   defaultDictPromptEnRu,
   defaultDictPromptEnVi,
   defaultDictUserPrompt,
+  defaultTradeEnglishPrompt,
+  defaultTradeEnglishUserPrompt,
   defaultSubtitlePrompt,
   defaultSystemPrompt,
 } from "./api";
@@ -353,6 +356,7 @@ describe("prompt settings", () => {
       [PROMPT_SLUG_DICTIONARY_EN_KO, defaultDictPromptEnKo],
       [PROMPT_SLUG_DICTIONARY_EN_VI, defaultDictPromptEnVi],
       [PROMPT_SLUG_DICTIONARY_EN_RU, defaultDictPromptEnRu],
+      [PROMPT_SLUG_TRADE_ENGLISH, defaultTradeEnglishPrompt],
     ];
 
     expect(PROMPT_TEMPLATE_CATEGORIES).toContain(PROMPT_CATEGORY_DICTIONARY);
@@ -370,7 +374,10 @@ describe("prompt settings", () => {
           slug,
           category: PROMPT_CATEGORY_DICTIONARY,
           systemPrompt,
-          userPrompt: defaultDictUserPrompt,
+          userPrompt:
+            slug === PROMPT_SLUG_TRADE_ENGLISH
+              ? defaultTradeEnglishUserPrompt
+              : defaultDictUserPrompt,
         })
       );
     });
@@ -437,5 +444,18 @@ describe("prompt settings", () => {
     );
     expect(defaultDictUserPrompt).not.toContain("上下文");
     expect(defaultDictUserPrompt).not.toContain("目标文本");
+  });
+
+  test("provides a foreign-trade English learning prompt for both source directions", () => {
+    const prompt = PRESET_PROMPTS.find(
+      ({ slug }) => slug === PROMPT_SLUG_TRADE_ENGLISH
+    );
+
+    expect(prompt.systemPrompt).toContain("If [Target] is English");
+    expect(prompt.systemPrompt).toContain("If [Target] is Chinese");
+    expect(prompt.systemPrompt).toContain("PVC = polyvinyl chloride");
+    expect(prompt.systemPrompt).toContain("### 组成与缩写");
+    expect(prompt.userPrompt).toContain("Surrounding paragraph:");
+    expect(UI_LANGS.every(([lang]) => I18N[prompt.nameKey]?.[lang])).toBe(true);
   });
 });

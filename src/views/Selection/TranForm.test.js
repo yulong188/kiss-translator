@@ -230,6 +230,44 @@ describe("TranForm translation service selection", () => {
     act(() => root.unmount());
   });
 
+  test("uses DeepSeek to build the foreign-trade learning card for Chinese input", async () => {
+    apiDict.mockResolvedValueOnce("**推荐表达**：`PVC hose`");
+    const { root } = renderTranForm({
+      text: "聚氯乙烯软管",
+      fromLang: "zh-CN",
+      enDict: "-",
+      aiDictApiSlug: "-",
+      tradeTermLearning: true,
+      tradeTermApiSlug: "DeepSeek",
+      transApis: [
+        {
+          apiSlug: "DeepSeek",
+          apiName: "DeepSeek",
+          apiType: "DeepSeek",
+          key: "sk-test",
+          maxTokens: 400,
+        },
+      ],
+      selectionContext: "聚氯乙烯软管适用于工业输水。",
+    });
+    await flushEffects();
+
+    expect(apiDict).toHaveBeenCalledWith(
+      expect.objectContaining({
+        text: "聚氯乙烯软管",
+        toLang: "zh-CN",
+        context: "聚氯乙烯软管适用于工业输水。",
+        apiSetting: expect.objectContaining({
+          apiSlug: "DeepSeek",
+          maxTokens: 900,
+          dictPrompt: expect.stringContaining("PVC = polyvinyl chloride"),
+        }),
+      })
+    );
+
+    act(() => root.unmount());
+  });
+
   test("switches to the secondary target when Chinese variants are disabled", async () => {
     tryDetectLang.mockResolvedValue("zh-TW");
     const { container, root } = renderTranForm({

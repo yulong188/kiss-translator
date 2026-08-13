@@ -20,12 +20,14 @@ import {
   OPT_DICT_MAP,
   OPT_SUG_MAP,
   PROMPT_MODE_FOLLOW_API,
+  DEFAULT_TRADE_TERM_PROMPT_SLUG,
   findPromptBySlug,
 } from "../../config";
 import { useState, useMemo, useEffect, useRef } from "react";
 import TranCont from "./TranCont";
 import DictCont from "./DictCont";
 import AiDictCont from "./AiDictCont";
+import TradeTermCont from "./TradeTermCont";
 import SugCont from "./SugCont";
 import CopyBtn from "./CopyBtn";
 import Zdic from "./Zdic";
@@ -53,6 +55,9 @@ export default function TranForm({
   enSug: initEnSug = "-",
   aiDictApiSlug = "-",
   aiDictPromptSlug = PROMPT_MODE_FOLLOW_API,
+  tradeTermLearning = false,
+  tradeTermApiSlug = "-",
+  tradeTermPromptSlug = DEFAULT_TRADE_TERM_PROMPT_SLUG,
   prompts = [],
   selectionContext = "",
   isPlaygound = false,
@@ -217,6 +222,35 @@ export default function TranForm({
     };
   }, [aiDictApiSlug, aiDictPromptSlug, prompts, transApis]);
   const aiDictAvailable = Boolean(text?.trim() && aiDictApiSetting);
+  const tradeTermApiSetting = useMemo(() => {
+    if (!tradeTermLearning || !tradeTermApiSlug || tradeTermApiSlug === "-") {
+      return null;
+    }
+
+    const apiSetting = transApis.find(
+      (api) => api.apiSlug === tradeTermApiSlug && !api.isDisabled
+    );
+    const prompt = findPromptBySlug(prompts, tradeTermPromptSlug);
+    if (!apiSetting || !prompt) {
+      return null;
+    }
+
+    return {
+      ...apiSetting,
+      maxTokens: Math.max(Number(apiSetting.maxTokens) || 0, 900),
+      dictPromptSlug: prompt.slug,
+      dictPrompt: prompt.systemPrompt,
+      dictUserPrompt: prompt.userPrompt,
+    };
+  }, [
+    prompts,
+    tradeTermApiSlug,
+    tradeTermLearning,
+    tradeTermPromptSlug,
+    transApis,
+  ]);
+  const selectionTradeContext =
+    selectionContext && selectionContext.includes(text) ? selectionContext : "";
 
   useEffect(() => {
     if (hasUserChangedDictTabRef.current) {
@@ -515,6 +549,15 @@ export default function TranForm({
         />
       ))}
 
+      {tradeTermApiSetting && text?.trim() && (
+        <TradeTermCont
+          text={text}
+          fromLang={fromLang}
+          apiSetting={tradeTermApiSetting}
+          context={selectionTradeContext}
+        />
+      )}
+
       {/* 2. 根据可用能力在默认词典与 AI 词典之间分流展示 */}
       {(defaultDictAvailable || aiDictAvailable) && (
         <Box>
@@ -560,9 +603,7 @@ export default function TranForm({
                   apiSetting={aiDictApiSetting}
                   context={
                     // 只在段落上下文确实包含当前文本时传入，避免手动输入内容复用旧划词上下文。
-                    selectionContext && selectionContext.includes(text)
-                      ? selectionContext
-                      : ""
+                    selectionTradeContext
                   }
                 />
               )}
