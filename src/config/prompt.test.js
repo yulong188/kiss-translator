@@ -455,6 +455,14 @@ describe("prompt settings", () => {
     expect(prompt.systemPrompt).toContain("If [Target] is Chinese");
     expect(prompt.systemPrompt).toContain("PVC = polyvinyl chloride");
     expect(prompt.systemPrompt).toContain("### 组成与缩写");
+    expect(prompt.systemPrompt).toContain("### 同类词释义");
+    expect(prompt.systemPrompt).toContain("#### 相关产品词");
+    expect(prompt.systemPrompt).toContain("#### 同用途不同分类");
+    expect(prompt.systemPrompt).toContain("trailer-mounted concrete pump");
+    expect(prompt.systemPrompt).toContain(
+      "products serving the same or a similar purpose"
+    );
+    expect(prompt.systemPrompt).not.toContain("### 易混辨析");
     expect(prompt.userPrompt).toContain("Surrounding paragraph:");
     expect(UI_LANGS.every(([lang]) => I18N[prompt.nameKey]?.[lang])).toBe(true);
   });
