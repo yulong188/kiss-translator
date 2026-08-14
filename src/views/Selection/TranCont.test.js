@@ -153,6 +153,7 @@ describe("TranCont", () => {
       });
     });
     expect(textarea.value).toBe("阶段译文");
+    expect(container.querySelector('[role="progressbar"]')).toBeNull();
 
     await act(async () => {
       deferred.resolve({ trText: "最终译文" });
@@ -218,6 +219,21 @@ describe("TranCont", () => {
     act(() => {
       root.unmount();
     });
+  });
+
+  test("passes the selected webpage context to the translation gateway", async () => {
+    apiTranslate.mockResolvedValueOnce({ trText: "储罐" });
+    const context =
+      "Water storage equipment: stainless steel tank, capacity 5000 L.";
+
+    const { root } = renderTranCont({ text: "tank", context });
+    await flushEffects();
+
+    expect(apiTranslate).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "tank", context })
+    );
+
+    act(() => root.unmount());
   });
 
   test("removes whitespace around Google line breaks", async () => {

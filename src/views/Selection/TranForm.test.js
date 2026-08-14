@@ -27,14 +27,19 @@ jest.mock("react-markdown", () => {
 jest.mock("./TranCont", () => {
   const React = require("react");
 
-  return ({ apiSlug, text, toLang, translateVariants }) =>
-    React.createElement("div", {
+  return ({ apiSlug, text, toLang, translateVariants, transApis, context }) => {
+    const apiSetting = transApis.find((api) => api.apiSlug === apiSlug);
+    return React.createElement("div", {
       "data-testid": "tran-cont",
       "data-api-slug": apiSlug,
       "data-text": text,
       "data-to-lang": toLang,
       "data-translate-variants": String(translateVariants),
+      "data-context": context,
+      "data-use-batch-fetch": String(apiSetting?.useBatchFetch),
+      "data-nobatch-prompt": apiSetting?.nobatchPrompt || "",
     });
+  };
 });
 
 jest.mock("./DictCont", () => {
@@ -226,6 +231,51 @@ describe("TranForm translation service selection", () => {
         (element) => element.dataset.text
       )
     ).toEqual(["First line Second line", "First line Second line"]);
+
+    act(() => root.unmount());
+  });
+
+  test("uses a context-first non-batch B2B prompt for the configured DeepSeek translator", async () => {
+    const source = "This stainless steel tank is suitable for potable water.";
+    const context =
+      "Water Storage Equipment This stainless steel tank is suitable for potable water. Capacity: 5000 L.";
+    const { container, root } = renderTranForm({
+      text: source,
+      translationText: source,
+      apiSlugs: ["DeepSeek", "google"],
+      transApis: [
+        {
+          apiSlug: "DeepSeek",
+          apiName: "DeepSeek",
+          apiType: "DeepSeek",
+          useBatchFetch: true,
+        },
+        {
+          apiSlug: "google",
+          apiName: "Google",
+          apiType: "Google",
+          useBatchFetch: true,
+        },
+      ],
+      tradeTermLearning: true,
+      tradeTermApiSlug: "DeepSeek",
+      selectionContext: context,
+    });
+    await flushEffects();
+
+    const [deepSeek, google] = container.querySelectorAll(
+      '[data-testid="tran-cont"]'
+    );
+    expect(deepSeek.dataset.context).toBe(context);
+    expect(deepSeek.dataset.useBatchFetch).toBe("false");
+    expect(deepSeek.dataset.nobatchPrompt).toContain(
+      'NEVER translate "tank" as "坦克"'
+    );
+    expect(deepSeek.dataset.nobatchPrompt).toContain(
+      "Translate the complete selected source text"
+    );
+    expect(google.dataset.useBatchFetch).toBe("true");
+    expect(google.dataset.nobatchPrompt).toBe("");
 
     act(() => root.unmount());
   });

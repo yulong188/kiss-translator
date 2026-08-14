@@ -100,6 +100,7 @@ const translateBuiltinText = async (text, translate) => {
  * @param {string} props.toLang 目标语言代码。
  * @param {string} props.apiSlug 选用的翻译 API 唯一标识。
  * @param {Array<Object>} props.transApis 可用翻译 API 配置列表。
+ * @param {string} [props.context=""] 当前选区所在段落或产品卡片语境。
  * @param {boolean} [props.simpleStyle=false] 是否使用极简文本样式渲染。
  * @returns {JSX.Element|null} 单个翻译服务商的结果视图。
  */
@@ -109,6 +110,7 @@ export default function TranCont({
   toLang,
   apiSlug,
   transApis,
+  context = "",
   translateVariants = true,
   simpleStyle = false,
 }) {
@@ -155,6 +157,8 @@ export default function TranCont({
           );
           if (nextText) {
             setTrText(nextText);
+            // 首个有效分块到达后内容已经可读，不再让等待图标持续转动。
+            setLoading(false);
           }
         }
       : undefined;
@@ -173,6 +177,7 @@ export default function TranCont({
             apiSetting,
             textFormat: "text",
             translateVariants,
+            context,
             onStreamChunk: handleStreamChunk,
             // 将组件生命周期的取消信号下传，避免划词内容变化后旧请求继续占用网络与回写 UI。
             signal: controller.signal,
@@ -209,7 +214,7 @@ export default function TranCont({
       // 组件卸载或依赖变化时主动中止请求，确保后台流式连接不会继续为旧划词结果推送数据。
       controller.abort();
     };
-  }, [text, fromLang, toLang, apiSetting, translateVariants]);
+  }, [text, fromLang, toLang, apiSetting, translateVariants, context]);
 
   if (!apiSetting) {
     return null;
@@ -222,7 +227,7 @@ export default function TranCont({
           <Alert severity="error">{error}</Alert>
         ) : trText ? (
           <Stack direction="row" spacing={1} alignItems="flex-start">
-            {loading && (
+            {loading && !trText && (
               <CircularProgress
                 size={12}
                 sx={{ flex: "0 0 auto", mt: "0.35em" }}
@@ -253,7 +258,8 @@ export default function TranCont({
         value={trText}
         helperText={error}
         InputProps={{
-          startAdornment: loading ? <CircularProgress size={16} /> : null,
+          startAdornment:
+            loading && !trText ? <CircularProgress size={16} /> : null,
           endAdornment: (
             <Stack
               direction="row"

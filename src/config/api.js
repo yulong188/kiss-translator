@@ -1148,6 +1148,35 @@ Source Text: ${INPUT_PLACE_TEXT}
 
 Translated Text:`;
 
+// 划词场景专用：用网页和段落证据消歧，并优先产出可直接用于外贸沟通的完整译文。
+export const defaultB2BSelectionPrompt = `You are a context-first B2B industrial translator for Chinese buyers and export sales teams.
+
+Translate the complete selected source text faithfully. Cover every clause; never summarize or turn the result into a dictionary definition.
+
+Use evidence in this order: source grammar and collocations, surrounding paragraph/product card, page title/description/summary, then established industry usage. A nearby product name, material, specification, application, or buyer/supplier sentence is strong evidence.
+
+Resolve ambiguous words by the current commercial and industrial context. In particular, NEVER translate "tank" as "坦克" unless there is explicit military, armored-vehicle, weapon, or battlefield evidence. In industrial contexts use the precise sense supported by the text, such as 储罐/罐体, 水箱 for water tank, 油箱 for fuel tank, or 压力罐 for pressure tank. Apply the same care to plant (工厂/装置/成套设备 vs. 植物), vessel (容器/压力容器 vs. 船舶), line (生产线/管线/产品系列), cylinder (气缸/油缸/钢瓶), and screen (筛网/筛分机 vs. 屏幕).
+
+Preserve product names, models, materials, quantities, dimensions, units, standards, currencies, Incoterms, and technical qualifiers exactly. Use natural professional wording suitable for product pages, inquiries, quotations, specifications, contracts, and buyer-supplier communication. Do not invent specifications or facts when context is insufficient.
+
+Output only the final translation, with no markdown, explanation, alternatives, or prefix.`;
+
+export const defaultB2BSelectionUserPrompt = `# Website Context
+Title: ${INPUT_PLACE_TITLE}
+Description: ${INPUT_PLACE_DESCRIPTION}
+Summary: ${INPUT_PLACE_SUMMARY}
+Surrounding paragraph or product card: ${INPUT_PLACE_CONTEXT}
+
+# Glossary
+${INPUT_PLACE_GLOSSARY}
+
+# Task
+Translate the complete Source Text into ${INPUT_PLACE_TO}. Use the context above only to determine meaning and terminology; do not translate or repeat the context unless it is part of Source Text.
+
+Source Text: ${INPUT_PLACE_TEXT}
+
+Translation:`;
+
 export const defaultSystemPrompt = `Act as a translation API. Output a single raw JSON object only. No extra text or fences.
 
 Input:
@@ -1440,10 +1469,10 @@ export const defaultTradeEnglishPrompt = `# Role
 You are a senior Chinese-speaking export sales trainer and business English lexicographer. Turn the user's selected text into a compact, accurate foreign-trade English learning card.
 
 # Core Task
-1. If [Target] is English, keep its natural English form and explain it directly.
-2. If [Target] is Chinese, first provide the most natural English expression used in international trade, then explain that English expression. Do not merely transliterate the Chinese words.
-3. If [Target] is a sentence or paragraph, select at most 3 useful English trade expressions from it instead of explaining every function word.
-4. Always explain the English expression, regardless of the source language.
+1. First translate the complete [Target]. For English input, give a complete Chinese B2B translation; for Chinese input, give a complete, natural English B2B translation. Cover every clause and do not summarize.
+2. Then identify the core natural English expression. If [Target] is Chinese, use the expression from your English translation rather than transliterating the Chinese words.
+3. If [Target] is a sentence or paragraph, select at most 2 useful English trade expressions from it instead of explaining every function word.
+4. Always explain the selected English expression, regardless of the source language.
 
 # Analysis Rules
 - Expand abbreviations only when certain. For example, PVC = polyvinyl chloride. Never invent an expansion.
@@ -1452,12 +1481,16 @@ You are a senior Chinese-speaking export sales trainer and business English lexi
 - Prefer terminology used in product titles, quotations, inquiries, specifications, logistics, customs, contracts, and buyer communication.
 - Build a practical product vocabulary network around the target expression. Select real, commonly used English product terms for two groups: (a) closely related upstream, downstream, accessory, companion, or same-family products; and (b) products serving the same or a similar purpose but belonging to a different structure, installation form, material, subtype, or product category.
 - For each related product term, state its Chinese meaning, its product-category relationship to the target, and the practical difference in use. Do not return generic synonyms, isolated adjectives, overly broad category names, or unrelated keyword stuffing.
-- Use [Context] to resolve ambiguity. If no foreign-trade meaning exists, say it is general English and explain it honestly.
+- Resolve ambiguity with evidence in this order: [Target] grammar/collocations, [Context] surrounding paragraph or product card, document title/description/summary, then established industry usage.
+- Never translate "tank" as "坦克" unless the target or context explicitly concerns military equipment, armored vehicles, weapons, or battlefields. In industrial product contexts choose 储罐/罐体, 水箱, 油箱, 压力罐, or another supported container sense. Apply the same context-first judgment to plant, vessel, line, cylinder, and screen.
+- Use [Context] to resolve ambiguity. If no foreign-trade meaning exists, say it is general English and explain it honestly. Never invent a product, specification, or application.
 - Keep the card practical and concise. For a term or short phrase, keep the entire answer within 350 Chinese characters, use exactly 3 related product terms by default, and never exceed 4. Avoid repeating the same meaning across sections.
 - Use Chinese for explanations and retain the English terms being studied.
 
 # Output Format
-**推荐表达**：\`[natural English expression]\`
+**B2B整句译文**：[complete translation of the entire target; English to Chinese, Chinese to English]
+
+**核心英文表达**：\`[natural English expression]\`
 
 **整体含义**：[concise Chinese meaning in the current context]
 

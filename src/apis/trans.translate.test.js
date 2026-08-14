@@ -1186,6 +1186,39 @@ describe("handleTranslate", () => {
     ]);
   });
 
+  test("stops a non-batch stream as soon as the provider reports completion", async () => {
+    async function* streamChunks() {
+      yield JSON.stringify({ choices: [{ delta: { content: "储罐" } }] });
+      yield JSON.stringify({
+        choices: [{ delta: {}, finish_reason: "stop" }],
+      });
+      yield JSON.stringify({ choices: [{ delta: { content: "错误尾帧" } }] });
+    }
+
+    fetchStream.mockReturnValueOnce(streamChunks());
+
+    const result = await collectAsyncGenerator(
+      handleTranslate(["tank"], {
+        from: "en",
+        to: "zh-CN",
+        fromLang: "English",
+        toLang: "Chinese",
+        langMap: () => "",
+        glossary: "",
+        apiSetting: getNobatchApiSetting({
+          useStream: true,
+          streamRenderMode: "realtime",
+        }),
+        usePool: false,
+      })
+    );
+
+    expect(result).toEqual([
+      { id: 0, partialText: "储罐", isComplete: false },
+      { id: 0, result: ["储罐"] },
+    ]);
+  });
+
   test("streams partial JSON text before a batched translation completes", async () => {
     async function* streamChunks() {
       yield JSON.stringify({

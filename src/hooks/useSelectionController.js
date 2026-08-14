@@ -186,16 +186,35 @@ function getFollowBoxPosition(rect, boxOffsetX, boxOffsetY, boxSize) {
   };
 }
 
+const normalizeContextText = (text) =>
+  String(text || "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+/**
+ * 采集选区附近最有辨识度的网页语境。优先保留当前句段，并在产品卡片、表格或
+ * 文章区块内补充标题/规格等同容器信息，避免只把 tank 之类的孤立词交给模型。
+ */
+function getElementContext(element) {
+  if (!element) return "";
+
+  const directContainer = element.closest?.(
+    "p, li, blockquote, h1, h2, h3, h4, h5, h6, dt, dd, th, td, tr, figcaption"
+  );
+  const productContainer = element.closest?.(
+    "article, section, [itemtype*='Product'], [class*='product'], [class*='card']"
+  );
+  const parts = [directContainer, productContainer, element]
+    .map((container) => normalizeContextText(container?.textContent))
+    .filter((part, index, all) => part && all.indexOf(part) === index);
+
+  return parts.join("\n").slice(0, 1400);
+}
+
 function getTargetContext(target) {
   const element =
     target?.nodeType === Node.ELEMENT_NODE ? target : target?.parentElement;
-  const container = element?.closest?.(
-    "p, li, blockquote, article, section, main, div"
-  );
-  return (container?.textContent || element?.textContent || "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 1000);
+  return getElementContext(element);
 }
 
 function getSelectionContext(selection) {
@@ -204,14 +223,7 @@ function getSelectionContext(selection) {
     const node = selection.getRangeAt(0).commonAncestorContainer;
     const element =
       node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
-    const container = element?.closest?.(
-      "p, li, blockquote, article, section, main, div"
-    );
-    if (!container) return "";
-    return (container?.textContent || element?.textContent || "")
-      .replace(/\s+/g, " ")
-      .trim()
-      .slice(0, 1000);
+    return getElementContext(element);
   } catch {
     return "";
   }

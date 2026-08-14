@@ -21,6 +21,9 @@ import {
   OPT_SUG_MAP,
   PROMPT_MODE_FOLLOW_API,
   DEFAULT_TRADE_TERM_PROMPT_SLUG,
+  API_SPE_TYPES,
+  defaultB2BSelectionPrompt,
+  defaultB2BSelectionUserPrompt,
   findPromptBySlug,
 } from "../../config";
 import { useState, useMemo, useEffect, useRef } from "react";
@@ -253,8 +256,37 @@ export default function TranForm({
     tradeTermPromptSlug,
     transApis,
   ]);
+  const normalizeContextMatchText = (value) =>
+    String(value || "")
+      .replace(/\s+/g, " ")
+      .trim();
   const selectionTradeContext =
-    selectionContext && selectionContext.includes(text) ? selectionContext : "";
+    selectionContext &&
+    normalizeContextMatchText(selectionContext).includes(
+      normalizeContextMatchText(text)
+    )
+      ? selectionContext
+      : "";
+  const selectionTransApis = useMemo(
+    () =>
+      transApis.map((api) => {
+        const isConfiguredB2BApi =
+          tradeTermLearning &&
+          api.apiSlug === tradeTermApiSlug &&
+          !api.isDisabled &&
+          API_SPE_TYPES.ai.has(api.apiType);
+        if (!isConfiguredB2BApi) return api;
+
+        return {
+          ...api,
+          // 单次整句请求可携带当前选区语境，也省去批处理等待时间。
+          useBatchFetch: false,
+          nobatchPrompt: defaultB2BSelectionPrompt,
+          nobatchUserPrompt: defaultB2BSelectionUserPrompt,
+        };
+      }),
+    [tradeTermApiSlug, tradeTermLearning, transApis]
+  );
 
   useEffect(() => {
     if (hasUserChangedDictTabRef.current) {
@@ -548,8 +580,9 @@ export default function TranForm({
           toLang={realToLang}
           simpleStyle={simpleStyle}
           apiSlug={slug}
-          transApis={transApis}
+          transApis={selectionTransApis}
           translateVariants={translateVariants}
+          context={selectionTradeContext}
         />
       ))}
 

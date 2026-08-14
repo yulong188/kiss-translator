@@ -97,6 +97,21 @@ import {
 const keyMap = new Map();
 const urlMap = new Map();
 
+/**
+ * 判断主流 SSE 协议是否已经明确发出完成事件，避免翻译完成后继续等待长连接关闭。
+ */
+const isStreamCompletedResponse = (json) =>
+  Boolean(
+    json?.choices?.some(
+      (choice) =>
+        choice?.finish_reason !== null && choice?.finish_reason !== undefined
+    ) ||
+      json?.type === "message_stop" ||
+      json?.event_type === "interaction.complete" ||
+      json?.type === "interaction.complete" ||
+      json?.candidates?.some((candidate) => candidate?.finishReason)
+  );
+
 // 轮询key/url
 // 轮询 Key / URL 负载均衡。
 // 用于在配置了多个 API 密钥或自定义 URL 端点时，分摊频率并降低单 Key 被限流限额的风险。
@@ -1833,16 +1848,7 @@ export const handleDict = async ({
 
           // 大多数 OpenAI 兼容接口（包括 DeepSeek）会先发 finish_reason，
           // 再发 [DONE] 或稍后才关闭连接。识别完成事件后立即收尾，不继续等长连接。
-          const streamCompleted =
-            json.choices?.some(
-              (choice) =>
-                choice?.finish_reason !== null &&
-                choice?.finish_reason !== undefined
-            ) ||
-            json.type === "message_stop" ||
-            json.event_type === "interaction.complete" ||
-            json.type === "interaction.complete" ||
-            json.candidates?.some((candidate) => candidate?.finishReason);
+          const streamCompleted = isStreamCompletedResponse(json);
           if (streamCompleted) break;
         } catch (error) {
           if (error?.isAIStreamTerminal) throw error;
@@ -2096,6 +2102,7 @@ async function* handleTranslateStreamInternal(
       try {
         const json = JSON.parse(rawData);
         const delta = getStreamDelta(json, apiType);
+        const streamCompleted = isStreamCompletedResponse(json);
 
         if (delta) {
           fullContent += delta;
@@ -2105,6 +2112,7 @@ async function* handleTranslateStreamInternal(
             if (streamRenderMode === "realtime") {
               yield { id: 0, partialText: fullContent, isComplete: false };
             }
+            if (streamCompleted) break;
             continue;
           }
 
@@ -2149,6 +2157,7 @@ async function* handleTranslateStreamInternal(
             }
           }
         }
+        if (streamCompleted) break;
       } catch (e) {
         if (e?.isAIStreamTerminal) throw e;
         // 忽略解析错误
