@@ -13,6 +13,7 @@ import {
 } from "../../config";
 import { useI18n } from "../../hooks/I18n";
 import CopyBtn from "./CopyBtn";
+import { BrowserTtsBtn } from "./AudioBtn";
 
 /**
  * 判断划词翻译结果是否允许进行可见的流式渲染。
@@ -113,6 +114,9 @@ export default function TranCont({
   context = "",
   translateVariants = true,
   simpleStyle = false,
+  ttsEnabled = true,
+  ttsEnglishAccent = "en-US",
+  ttsRate = 1,
 }) {
   const i18n = useI18n();
   const [trText, setTrText] = useState("");
@@ -233,6 +237,14 @@ export default function TranCont({
                 sx={{ flex: "0 0 auto", mt: "0.35em" }}
               />
             )}
+            <BrowserTtsBtn
+              text={trText}
+              lang={toLang}
+              enabled={ttsEnabled}
+              englishAccent={ttsEnglishAccent}
+              rate={ttsRate}
+              title={i18n("speak_translation")}
+            />
             <Typography style={{ whiteSpace: "pre-line" }}>{trText}</Typography>
           </Stack>
         ) : loading ? (
@@ -269,6 +281,14 @@ export default function TranCont({
                 top: 0,
               }}
             >
+              <BrowserTtsBtn
+                text={trText}
+                lang={toLang}
+                enabled={ttsEnabled}
+                englishAccent={ttsEnglishAccent}
+                rate={ttsRate}
+                title={i18n("speak_translation")}
+              />
               {/* 复制当前译文；流式渲染期间复制到的是已经到达的部分文本。 */}
               <CopyBtn text={trText} title={i18n("copy")} />
             </Stack>

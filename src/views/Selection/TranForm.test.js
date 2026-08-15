@@ -27,7 +27,17 @@ jest.mock("react-markdown", () => {
 jest.mock("./TranCont", () => {
   const React = require("react");
 
-  return ({ apiSlug, text, toLang, translateVariants, transApis, context }) => {
+  return ({
+    apiSlug,
+    text,
+    toLang,
+    translateVariants,
+    transApis,
+    context,
+    ttsEnabled,
+    ttsEnglishAccent,
+    ttsRate,
+  }) => {
     const apiSetting = transApis.find((api) => api.apiSlug === apiSlug);
     return React.createElement("div", {
       "data-testid": "tran-cont",
@@ -36,6 +46,9 @@ jest.mock("./TranCont", () => {
       "data-to-lang": toLang,
       "data-translate-variants": String(translateVariants),
       "data-context": context,
+      "data-tts-enabled": String(ttsEnabled),
+      "data-tts-accent": ttsEnglishAccent,
+      "data-tts-rate": String(ttsRate),
       "data-use-batch-fetch": String(apiSetting?.useBatchFetch),
       "data-nobatch-prompt": apiSetting?.nobatchPrompt || "",
     });
@@ -55,8 +68,22 @@ jest.mock("./AudioBtn", () => {
   const React = require("react");
 
   return {
-    BrowserTtsBtn: () =>
-      React.createElement("button", { type: "button" }, "speak"),
+    BrowserTtsBtn: ({ text, lang, enabled, englishAccent, rate }) =>
+      text
+        ? React.createElement(
+            "button",
+            {
+              type: "button",
+              "data-testid": "source-tts",
+              "data-text": text,
+              "data-lang": lang,
+              "data-enabled": String(enabled),
+              "data-accent": englishAccent,
+              "data-rate": String(rate),
+            },
+            "speak"
+          )
+        : null,
   };
 });
 
@@ -211,6 +238,30 @@ describe("TranForm translation service selection", () => {
     apiDict.mockReset();
     tryDetectLang.mockResolvedValue("en");
     document.body.innerHTML = "";
+  });
+
+  test("shares voice settings with the source and translated result", async () => {
+    const { container, root } = renderTranForm({
+      text: "storage tank",
+      apiSlugs: ["openai"],
+      ttsEnabled: true,
+      ttsEnglishAccent: "en-GB",
+      ttsRate: 0.75,
+    });
+    await flushEffects();
+
+    const sourceSpeech = container.querySelector("[data-testid='source-tts']");
+    expect(sourceSpeech.dataset.text).toBe("storage tank");
+    expect(sourceSpeech.dataset.lang).toBe("en");
+    expect(sourceSpeech.dataset.accent).toBe("en-GB");
+    expect(sourceSpeech.dataset.rate).toBe("0.75");
+
+    const translation = container.querySelector("[data-testid='tran-cont']");
+    expect(translation.dataset.ttsEnabled).toBe("true");
+    expect(translation.dataset.ttsAccent).toBe("en-GB");
+    expect(translation.dataset.ttsRate).toBe("0.75");
+
+    act(() => root.unmount());
   });
 
   test("uses translationText for every translation service", async () => {

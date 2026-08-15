@@ -61,6 +61,9 @@ export default function Playgound() {
     enSug,
     aiDictApiSlug,
     aiDictPromptSlug,
+    ttsEnabled = true,
+    ttsEnglishAccent = "en-US",
+    ttsRate = 1,
   } = tranboxSetting || DEFAULT_TRANBOX_SETTING;
   return (
     <Box>
@@ -112,6 +115,9 @@ export default function Playgound() {
             enSug={enSug}
             aiDictApiSlug={aiDictApiSlug}
             aiDictPromptSlug={aiDictPromptSlug}
+            ttsEnabled={ttsEnabled}
+            ttsEnglishAccent={ttsEnglishAccent}
+            ttsRate={ttsRate}
             prompts={prompts}
             translateVariants={translateVariants}
             isPlaygound={true} // 标识为 Playground 环境以进行特定的渲染样式和交互处理

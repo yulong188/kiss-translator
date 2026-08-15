@@ -155,6 +155,9 @@ export const DEFAULT_TRANBOX_SETTING = {
   tradeTermLearning: true,
   tradeTermApiSlug: OPT_TRANS_DEEPSEEK,
   tradeTermPromptSlug: DEFAULT_TRADE_TERM_PROMPT_SLUG,
+  ttsEnabled: true,
+  ttsEnglishAccent: "en-US",
+  ttsRate: 1,
 };
 
 // --- 字幕默认样式属性 ---

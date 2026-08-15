@@ -36,6 +36,12 @@ describe("translation box defaults", () => {
     );
   });
 
+  test("enables system speech with a neutral default speed", () => {
+    expect(DEFAULT_TRANBOX_SETTING.ttsEnabled).toBe(true);
+    expect(DEFAULT_TRANBOX_SETTING.ttsEnglishAccent).toBe("en-US");
+    expect(DEFAULT_TRANBOX_SETTING.ttsRate).toBe(1);
+  });
+
   test("follows the current page rule for hover bubbles by default", () => {
     expect(DEFAULT_MOUSE_HOVER_SETTING.apiSlug).toBe(GLOBAL_KEY);
   });

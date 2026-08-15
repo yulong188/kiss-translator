@@ -33,6 +33,7 @@ import AiDictCont from "./AiDictCont";
 import TradeTermCont from "./TradeTermCont";
 import SugCont from "./SugCont";
 import CopyBtn from "./CopyBtn";
+import { BrowserTtsBtn } from "./AudioBtn";
 import Zdic from "./Zdic";
 import { isValidWord, isSingleChineseChar } from "../../libs/utils";
 import { kissLog } from "../../libs/log";
@@ -63,6 +64,9 @@ export default function TranForm({
   tradeTermPromptSlug = DEFAULT_TRADE_TERM_PROMPT_SLUG,
   prompts = [],
   selectionContext = "",
+  ttsEnabled = true,
+  ttsEnglishAccent = "en-US",
+  ttsRate = 1,
   isPlaygound = false,
   autoFocusInput = true,
   syncExternalTextWhileEditing = false,
@@ -550,8 +554,18 @@ export default function TranForm({
                         <DoneIcon fontSize="inherit" />
                       </IconButton>
                     ) : text ? (
-                      /* 有内容时：显示一键复制按钮 */
-                      <CopyBtn text={text} title={i18n("copy")} />
+                      /* 有内容时：显示朗读与一键复制按钮 */
+                      <>
+                        <BrowserTtsBtn
+                          text={text}
+                          lang={fromLang === "auto" ? deLang : fromLang}
+                          enabled={ttsEnabled}
+                          englishAccent={ttsEnglishAccent}
+                          rate={ttsRate}
+                          title={i18n("speak_original")}
+                        />
+                        <CopyBtn text={text} title={i18n("copy")} />
+                      </>
                     ) : (
                       /* 无内容时：显示一键粘贴按钮 */
                       <IconButton
@@ -570,6 +584,19 @@ export default function TranForm({
         </>
       )}
 
+      {simpleStyle && text?.trim() && (
+        <Box sx={{ display: "flex", justifyContent: "flex-end", my: -0.5 }}>
+          <BrowserTtsBtn
+            text={text}
+            lang={fromLang === "auto" ? deLang : fromLang}
+            enabled={ttsEnabled}
+            englishAccent={ttsEnglishAccent}
+            rate={ttsRate}
+            title={i18n("speak_original")}
+          />
+        </Box>
+      )}
+
       {/* ---------------- 翻译及释义面板的按需渲染分发 ---------------- */}
       {/* 1. 分别为每一个选定的翻译服务引擎渲染对应的 TranCont 内容翻译器 */}
       {activeApiSlugs.map((slug) => (
@@ -583,6 +610,9 @@ export default function TranForm({
           transApis={selectionTransApis}
           translateVariants={translateVariants}
           context={selectionTradeContext}
+          ttsEnabled={ttsEnabled}
+          ttsEnglishAccent={ttsEnglishAccent}
+          ttsRate={ttsRate}
         />
       ))}
 
@@ -592,6 +622,9 @@ export default function TranForm({
           fromLang={fromLang}
           apiSetting={tradeTermApiSetting}
           context={selectionTradeContext}
+          ttsEnabled={ttsEnabled}
+          ttsEnglishAccent={ttsEnglishAccent}
+          ttsRate={ttsRate}
         />
       )}
 
@@ -642,6 +675,10 @@ export default function TranForm({
                     // 只在段落上下文确实包含当前文本时传入，避免手动输入内容复用旧划词上下文。
                     selectionTradeContext
                   }
+                  showSpeechButton={false}
+                  ttsEnabled={ttsEnabled}
+                  ttsEnglishAccent={ttsEnglishAccent}
+                  ttsRate={ttsRate}
                 />
               )}
             </>

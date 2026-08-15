@@ -1,4 +1,11 @@
-import { canSpeak, speak } from "./speech";
+import {
+  canSpeak,
+  pauseSpeech,
+  resolveSpeechLanguage,
+  resumeSpeech,
+  speak,
+  stopSpeech,
+} from "./speech";
 
 describe("speech", () => {
   const originalChrome = globalThis.chrome;
@@ -6,6 +13,7 @@ describe("speech", () => {
   const originalSpeechSynthesisUtterance = globalThis.SpeechSynthesisUtterance;
 
   beforeEach(() => {
+    stopSpeech();
     delete globalThis.chrome;
     delete globalThis.speechSynthesis;
     delete globalThis.SpeechSynthesisUtterance;
@@ -60,6 +68,26 @@ describe("speech", () => {
     );
   });
 
+  test("resolves automatic Chinese and the configured English accent", () => {
+    expect(resolveSpeechLanguage("不锈钢储罐", "auto", "en-GB")).toBe("zh-CN");
+    expect(resolveSpeechLanguage("stainless steel tank", "auto", "en-GB")).toBe(
+      "en-GB"
+    );
+    expect(resolveSpeechLanguage("tank", "en", "en-GB")).toBe("en-GB");
+  });
+
+  test("passes speaking rate to chrome tts", () => {
+    const chromeSpeak = jest.fn();
+    globalThis.chrome = { tts: { speak: chromeSpeak } };
+
+    expect(speak("storage tank", "en-US", {}, { rate: 0.75 })).toBe(true);
+    expect(chromeSpeak).toHaveBeenCalledWith(
+      "storage tank",
+      expect.objectContaining({ rate: 0.75, pitch: 1, volume: 1 }),
+      expect.any(Function)
+    );
+  });
+
   test("runs onEnd when chrome tts reports a final event", () => {
     let chromeOnEvent;
     const onEnd = jest.fn();
@@ -91,6 +119,42 @@ describe("speech", () => {
     expect(webSpeak).toHaveBeenCalledWith(
       expect.objectContaining({ text: "search", lang: "en-GB" })
     );
+  });
+
+  test("passes speaking rate to Web Speech", () => {
+    const webSpeak = jest.fn();
+    function MockUtterance(text) {
+      this.text = text;
+    }
+    globalThis.speechSynthesis = { speak: webSpeak };
+    globalThis.SpeechSynthesisUtterance = MockUtterance;
+
+    expect(speak("storage tank", "en-GB", {}, { rate: 1.25 })).toBe(true);
+    expect(webSpeak).toHaveBeenCalledWith(
+      expect.objectContaining({ lang: "en-GB", rate: 1.25 })
+    );
+  });
+
+  test("controls the active chrome tts session", () => {
+    const onEnd = jest.fn();
+    globalThis.chrome = {
+      tts: {
+        speak: jest.fn(),
+        stop: jest.fn(),
+        pause: jest.fn(),
+        resume: jest.fn(),
+      },
+    };
+
+    speak("storage tank", "en", { onEnd });
+    expect(pauseSpeech()).toBe(true);
+    expect(resumeSpeech()).toBe(true);
+    stopSpeech();
+
+    expect(globalThis.chrome.tts.pause).toHaveBeenCalledTimes(1);
+    expect(globalThis.chrome.tts.resume).toHaveBeenCalledTimes(1);
+    expect(globalThis.chrome.tts.stop).toHaveBeenCalledTimes(1);
+    expect(onEnd).toHaveBeenCalledTimes(1);
   });
 
   test("falls back to Web Speech API when chrome tts throws", () => {
