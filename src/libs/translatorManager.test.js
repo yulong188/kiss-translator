@@ -50,6 +50,8 @@ jest.mock("./translator", () => ({
       stop: jest.fn(function stop() {
         this.rule.transOpen = "false";
       }),
+      enable: jest.fn(),
+      disable: jest.fn(),
       rescan: jest.fn(),
       toggle: jest.fn(),
       toggleTransOnly: jest.fn(),
@@ -151,6 +153,8 @@ function setupMockConstructors() {
       stop: jest.fn(function stop() {
         this.rule.transOpen = "false";
       }),
+      enable: jest.fn(),
+      disable: jest.fn(),
       rescan: jest.fn(),
       toggle: jest.fn(),
       toggleTransOnly: jest.fn(),
@@ -374,6 +378,43 @@ describe("TranslatorManager SPA lifecycle", () => {
     });
 
     document.removeEventListener("kiss-inner", eventHandler);
+  });
+
+  test("sets translation to the requested state instead of blindly toggling", () => {
+    const manager = createManager({ rule: { transOpen: "false" } });
+    manager.start();
+
+    const runtimeHandler =
+      browser.runtime.onMessage.addListener.mock.calls[0][0];
+    const sendResponse = jest.fn();
+
+    runtimeHandler(
+      { action: "trans-toggle", args: { enabled: true } },
+      {},
+      sendResponse
+    );
+    runtimeHandler(
+      { action: "trans-toggle", args: { enabled: false } },
+      {},
+      sendResponse
+    );
+
+    expect(mockTranslatorInstances[0].enable).toHaveBeenCalledTimes(1);
+    expect(mockTranslatorInstances[0].disable).toHaveBeenCalledTimes(1);
+    expect(mockTranslatorInstances[0].toggle).not.toHaveBeenCalled();
+  });
+
+  test("keeps shortcut and context-menu translation actions as toggles", () => {
+    const manager = createManager({ rule: { transOpen: "false" } });
+    manager.start();
+
+    const runtimeHandler =
+      browser.runtime.onMessage.addListener.mock.calls[0][0];
+    runtimeHandler({ action: "trans-toggle" }, {}, jest.fn());
+
+    expect(mockTranslatorInstances[0].toggle).toHaveBeenCalledTimes(1);
+    expect(mockTranslatorInstances[0].enable).not.toHaveBeenCalled();
+    expect(mockTranslatorInstances[0].disable).not.toHaveBeenCalled();
   });
 
   test("cleans up transbox-only runtime on stop", () => {

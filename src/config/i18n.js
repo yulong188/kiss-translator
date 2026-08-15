@@ -4814,6 +4814,15 @@ export const I18N = {
     tr: `Veri yükleme hatası, lütfen sayfayı yenileyin veya uygulamayı kaldırıp yeniden yükleyin`,
     vi: "Data loading error, please refresh the page or uninstall and reinstall.",
   },
+  translation_page_unavailable: {
+    zh: `当前网页的翻译组件未就绪，请刷新网页后重试。`,
+    en: `Translation is not ready on this page. Refresh the page and try again.`,
+    zh_TW: `目前網頁的翻譯元件尚未就緒，請重新整理後再試。`,
+    ja: `このページの翻訳機能はまだ準備できていません。ページを再読み込みして再試行してください。`,
+    ko: `이 페이지의 번역 기능이 준비되지 않았습니다. 페이지를 새로고침한 후 다시 시도하세요.`,
+    tr: `Bu sayfadaki çeviri bileşeni hazır değil. Sayfayı yenileyip tekrar deneyin.`,
+    vi: `Tính năng dịch trên trang này chưa sẵn sàng. Hãy tải lại trang và thử lại.`,
+  },
   translation_style: {
     zh: `翻译风格`,
     en: `Translation style`,

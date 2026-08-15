@@ -107,16 +107,29 @@ export default function PopupCont({
 
   // 切换“网页双语翻译”开启/关闭状态
   const handleTransToggle = async (e) => {
+    const enabled = e.target.checked;
     try {
-      setRule({ ...rule, transOpen: e.target.checked ? "true" : "false" });
-
       if (!processActions) {
-        await sendTabMsg(MSG_TRANS_TOGGLE);
+        const response = await sendTabMsg(MSG_TRANS_TOGGLE, { enabled });
+        if (!response) {
+          setSnackbar({
+            open: true,
+            message: i18n("translation_page_unavailable"),
+          });
+          return;
+        }
       } else {
-        processActions({ action: MSG_TRANS_TOGGLE });
+        processActions({ action: MSG_TRANS_TOGGLE, args: { enabled } });
       }
+
+      // 由翻译器确认执行后再更新开关，避免 UI 显示开启但网页实际未运行。
+      setRule({ ...rule, transOpen: enabled ? "true" : "false" });
     } catch (err) {
       kissLog("toggle trans", err);
+      setSnackbar({
+        open: true,
+        message: i18n("translation_page_unavailable"),
+      });
     }
   };
 

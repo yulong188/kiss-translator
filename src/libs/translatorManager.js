@@ -663,7 +663,13 @@ export default class TranslatorManager {
 
     switch (action) {
       case MSG_TRANS_TOGGLE:
-        this._translator?.toggle();
+        if (typeof args?.enabled === "boolean") {
+          args.enabled
+            ? this._translator?.enable()
+            : this._translator?.disable();
+        } else {
+          this._translator?.toggle();
+        }
         break;
       case MSG_TRANS_TOGGLE_ONLY:
         this._translator?.toggleTransOnly();
