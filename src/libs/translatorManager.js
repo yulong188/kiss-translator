@@ -228,8 +228,14 @@ export default class TranslatorManager {
       return;
     }
 
+    const translatorRule = this.#cloneConfig(this.#rule);
+    // 页面刷新后若规则会自动开启翻译，也必须沿用“开启即隐藏原文”的默认行为。
+    if (translatorRule?.transOpen === "true") {
+      translatorRule.transOnly = "true";
+    }
+
     this._translator = new Translator({
-      rule: this.#cloneConfig(this.#rule),
+      rule: translatorRule,
       setting: this.#cloneConfig(this.#setting),
       favWords: this.#cloneConfig(this.#favWords),
       isUserscript: this.#isUserscript,
@@ -671,6 +677,9 @@ export default class TranslatorManager {
             ? this._translator?.enable()
             : this._translator?.disable();
         } else {
+          if (this._translator?.rule?.transOpen !== "true") {
+            this._translator?.updateRule({ transOnly: "true" });
+          }
           this._translator?.toggle();
         }
         break;

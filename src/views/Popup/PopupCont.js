@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import Stack from "@mui/material/Stack";
 import MenuItem from "@mui/material/MenuItem";
 import FormControlLabel from "@mui/material/FormControlLabel";
@@ -67,6 +67,7 @@ export default function PopupCont({
 
   // 当前网页的完整 URL 地址
   const [currentHref, setCurrentHref] = useState("");
+  const initialTransOnlyAppliedRef = useRef(false);
 
   // 从全局配置中读取黑名单字符串数据（多域名用换行或逗号分隔）
   const blacklistValue = contextSetting?.blacklist || "";
@@ -76,6 +77,40 @@ export default function PopupCont({
     if (!selectedDomain || !blacklistValue) return false;
     return isInBlacklist(currentHref, blacklistValue);
   }, [selectedDomain, blacklistValue, currentHref]);
+
+  // 扩展更新或页面恢复后，翻译可能已经开启但仍沿用旧的双语规则。
+  // 弹窗首次读取到这种状态时补齐默认值；之后仍允许用户手动恢复双语。
+  useEffect(() => {
+    if (initialTransOnlyAppliedRef.current) return;
+
+    initialTransOnlyAppliedRef.current = true;
+    if (rule?.transOpen !== "true" || rule?.transOnly === "true") return;
+
+    const applyDefaultTransOnly = async () => {
+      try {
+        if (!processActions) {
+          const response = await sendTabMsg(MSG_TRANS_PUTRULE, {
+            transOnly: "true",
+          });
+          if (!response) {
+            initialTransOnlyAppliedRef.current = false;
+            return;
+          }
+        } else {
+          processActions({
+            action: MSG_TRANS_PUTRULE,
+            args: { transOnly: "true" },
+          });
+        }
+        setRule((pre) => ({ ...pre, transOnly: "true" }));
+      } catch (err) {
+        initialTransOnlyAppliedRef.current = false;
+        kissLog("apply default translation-only mode", err);
+      }
+    };
+
+    applyDefaultTransOnly();
+  }, [processActions, rule?.transOnly, rule?.transOpen, setRule]);
 
   // 将当前选中域名加入黑名单的逻辑
   const handleAddToBlacklist = useCallback(() => {

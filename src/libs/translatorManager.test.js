@@ -318,6 +318,18 @@ describe("TranslatorManager SPA lifecycle", () => {
     expect(mockTranslatorArgs[1].setting.inputRule.transOpen).toBe(false);
   });
 
+  test("defaults to hidden original when translation resumes after refresh", () => {
+    const manager = createManager({
+      rule: { transOpen: "true", transOnly: "false" },
+    });
+    manager.start();
+
+    expect(mockTranslatorArgs[0].rule).toMatchObject({
+      transOpen: "true",
+      transOnly: "true",
+    });
+  });
+
   test("coalesces navigation rescan and body replacement into one restart", async () => {
     const manager = createManager();
     manager.start();
@@ -419,7 +431,9 @@ describe("TranslatorManager SPA lifecycle", () => {
     runtimeHandler({ action: "trans-toggle" }, {}, jest.fn());
 
     expect(mockTranslatorInstances[0].toggle).toHaveBeenCalledTimes(1);
-    expect(mockTranslatorInstances[0].updateRule).not.toHaveBeenCalled();
+    expect(mockTranslatorInstances[0].updateRule).toHaveBeenCalledWith({
+      transOnly: "true",
+    });
     expect(mockTranslatorInstances[0].enable).not.toHaveBeenCalled();
     expect(mockTranslatorInstances[0].disable).not.toHaveBeenCalled();
   });
