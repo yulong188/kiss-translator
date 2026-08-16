@@ -11,6 +11,9 @@
   "toggle_translate": {
     "message": "开启翻译"
   },
+  "disable_translate": {
+    "message": "关闭翻译"
+  },
   "toggle_translate_only": {
     "message": "仅看译文"
   },

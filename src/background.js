@@ -31,6 +31,7 @@ import {
   STOKEY_SEPARATE_WINDOW,
   PORT_STREAM_FETCH,
   MSG_UPDATE_ICON,
+  MSG_TRANS_GETRULE,
   MSG_SHA256,
 } from "./config";
 import {
@@ -53,6 +54,49 @@ import { sha256 } from "./libs/utils";
 globalThis.__KISS_CONTEXT__ = "background";
 
 let openingOptionsPage = false;
+const translationStateByTab = new Map();
+
+async function updateTranslateContextMenuTitle(isActive) {
+  if (typeof browser?.contextMenus?.update !== "function") return;
+
+  const title = browser.i18n.getMessage(
+    isActive ? "disable_translate" : "toggle_translate"
+  );
+  if (!title) return;
+
+  try {
+    await browser.contextMenus.update(CMD_TOGGLE_TRANSLATE, { title });
+    await browser.contextMenus.refresh?.();
+  } catch (err) {
+    // 菜单关闭或尚未创建时无需中断后台流程。
+    kissLog("update translate context menu title", err);
+  }
+}
+
+async function syncTranslateContextMenuTitle(tab) {
+  const tabId = tab?.id;
+  if (!Number.isInteger(tabId)) {
+    await updateTranslateContextMenuTitle(false);
+    return;
+  }
+
+  if (translationStateByTab.has(tabId)) {
+    await updateTranslateContextMenuTitle(translationStateByTab.get(tabId));
+    return;
+  }
+
+  try {
+    const response = await browser.tabs.sendMessage(tabId, {
+      action: MSG_TRANS_GETRULE,
+    });
+    const isActive = response?.rule?.transOpen === "true";
+    translationStateByTab.set(tabId, isActive);
+    await updateTranslateContextMenuTitle(isActive);
+  } catch (err) {
+    translationStateByTab.set(tabId, false);
+    await updateTranslateContextMenuTitle(false);
+  }
+}
 
 /**
  * Open the extension settings with the native API when available.
@@ -99,6 +143,11 @@ async function updateIcon(isActive, tabId) {
     192: `images/logo192${suffix}.png`,
   };
   try {
+    if (Number.isInteger(tabId)) {
+      translationStateByTab.set(tabId, Boolean(isActive));
+      await updateTranslateContextMenuTitle(Boolean(isActive));
+    }
+
     // 兼容 MV3 (browser.action) 和 MV2 (browser.browserAction) 规范下的 Firefox 和 Chrome
     if (browser.action) {
       await browser.action.setIcon({ path, tabId });
@@ -653,6 +702,20 @@ browser?.contextMenus?.onClicked?.addListener?.(
     }
   }
 );
+
+browser?.contextMenus?.onShown?.addListener?.((_info, tab) => {
+  syncTranslateContextMenuTitle(tab);
+});
+
+browser?.tabs?.onRemoved?.addListener?.((tabId) => {
+  translationStateByTab.delete(tabId);
+});
+
+browser?.tabs?.onUpdated?.addListener?.((tabId, changeInfo) => {
+  if (changeInfo?.status === "loading") {
+    translationStateByTab.delete(tabId);
+  }
+});
 
 /**
  * 专门处理 SSE/翻译大模型的流式数据请求通道。

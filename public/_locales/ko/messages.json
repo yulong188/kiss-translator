@@ -11,6 +11,9 @@
   "toggle_translate": {
     "message": "번역 켜기"
   },
+  "disable_translate": {
+    "message": "번역 끄기"
+  },
   "toggle_translate_only": {
     "message": "번역만 표시"
   },

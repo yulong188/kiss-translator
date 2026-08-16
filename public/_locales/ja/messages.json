@@ -11,6 +11,9 @@
   "toggle_translate": {
     "message": "翻訳の切り替え"
   },
+  "disable_translate": {
+    "message": "翻訳を無効にする"
+  },
   "toggle_translate_only": {
     "message": "訳文のみ表示"
   },
