@@ -389,7 +389,10 @@ describe("TranslatorManager SPA lifecycle", () => {
     const sendResponse = jest.fn();
 
     runtimeHandler(
-      { action: "trans-toggle", args: { enabled: true } },
+      {
+        action: "trans-toggle",
+        args: { enabled: true, transOnly: "true" },
+      },
       {},
       sendResponse
     );
@@ -399,6 +402,9 @@ describe("TranslatorManager SPA lifecycle", () => {
       sendResponse
     );
 
+    expect(mockTranslatorInstances[0].updateRule).toHaveBeenCalledWith({
+      transOnly: "true",
+    });
     expect(mockTranslatorInstances[0].enable).toHaveBeenCalledTimes(1);
     expect(mockTranslatorInstances[0].disable).toHaveBeenCalledTimes(1);
     expect(mockTranslatorInstances[0].toggle).not.toHaveBeenCalled();
@@ -413,6 +419,7 @@ describe("TranslatorManager SPA lifecycle", () => {
     runtimeHandler({ action: "trans-toggle" }, {}, jest.fn());
 
     expect(mockTranslatorInstances[0].toggle).toHaveBeenCalledTimes(1);
+    expect(mockTranslatorInstances[0].updateRule).not.toHaveBeenCalled();
     expect(mockTranslatorInstances[0].enable).not.toHaveBeenCalled();
     expect(mockTranslatorInstances[0].disable).not.toHaveBeenCalled();
   });

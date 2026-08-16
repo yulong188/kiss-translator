@@ -108,9 +108,13 @@ export default function PopupCont({
   // 切换“网页双语翻译”开启/关闭状态
   const handleTransToggle = async (e) => {
     const enabled = e.target.checked;
+    const transOnly = enabled ? "true" : rule.transOnly;
     try {
       if (!processActions) {
-        const response = await sendTabMsg(MSG_TRANS_TOGGLE, { enabled });
+        const response = await sendTabMsg(MSG_TRANS_TOGGLE, {
+          enabled,
+          transOnly,
+        });
         if (!response) {
           setSnackbar({
             open: true,
@@ -119,11 +123,18 @@ export default function PopupCont({
           return;
         }
       } else {
-        processActions({ action: MSG_TRANS_TOGGLE, args: { enabled } });
+        processActions({
+          action: MSG_TRANS_TOGGLE,
+          args: { enabled, transOnly },
+        });
       }
 
-      // 由翻译器确认执行后再更新开关，避免 UI 显示开启但网页实际未运行。
-      setRule({ ...rule, transOpen: enabled ? "true" : "false" });
+      // 开启网页翻译时默认隐藏原文；翻译器确认后再同步界面状态。
+      setRule({
+        ...rule,
+        transOpen: enabled ? "true" : "false",
+        transOnly,
+      });
     } catch (err) {
       kissLog("toggle trans", err);
       setSnackbar({

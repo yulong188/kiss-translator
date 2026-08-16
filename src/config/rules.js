@@ -141,7 +141,7 @@ export const GLOBLA_RULE = {
   grandStyle: "",
   injectJs: "",
   injectCss: "",
-  transOnly: "false", // 默认保留原文，呈现双语对比形式
+  transOnly: "true", // 默认隐藏原文，仅显示译文
   transOnlyRevert: "false",
   transOnlyRevertDelay: "0.5",
   // transTiming: OPT_TIMING_PAGESCROLL, // 翻译时机/鼠标悬停翻译 (暂时作废)

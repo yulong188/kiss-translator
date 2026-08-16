@@ -664,6 +664,9 @@ export default class TranslatorManager {
     switch (action) {
       case MSG_TRANS_TOGGLE:
         if (typeof args?.enabled === "boolean") {
+          if (args.enabled && args.transOnly === "true") {
+            this._translator?.updateRule({ transOnly: "true" });
+          }
           args.enabled
             ? this._translator?.enable()
             : this._translator?.disable();
