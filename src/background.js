@@ -54,7 +54,6 @@ import { sha256 } from "./libs/utils";
 globalThis.__KISS_CONTEXT__ = "background";
 
 let openingOptionsPage = false;
-const translationStateByTab = new Map();
 
 async function updateTranslateContextMenuTitle(isActive) {
   if (typeof browser?.contextMenus?.update !== "function") return;
@@ -77,24 +76,19 @@ async function syncTranslateContextMenuTitle(tab) {
   const tabId = tab?.id;
   if (!Number.isInteger(tabId)) {
     await updateTranslateContextMenuTitle(false);
-    return;
-  }
-
-  if (translationStateByTab.has(tabId)) {
-    await updateTranslateContextMenuTitle(translationStateByTab.get(tabId));
-    return;
+    return false;
   }
 
   try {
     const response = await browser.tabs.sendMessage(tabId, {
       action: MSG_TRANS_GETRULE,
     });
-    const isActive = response?.rule?.transOpen === "true";
-    translationStateByTab.set(tabId, isActive);
-    await updateTranslateContextMenuTitle(isActive);
+    const hasTranslation = response?.hasTranslation === true;
+    await updateTranslateContextMenuTitle(hasTranslation);
+    return hasTranslation;
   } catch (err) {
-    translationStateByTab.set(tabId, false);
     await updateTranslateContextMenuTitle(false);
+    return false;
   }
 }
 
@@ -143,11 +137,6 @@ async function updateIcon(isActive, tabId) {
     192: `images/logo192${suffix}.png`,
   };
   try {
-    if (Number.isInteger(tabId)) {
-      translationStateByTab.set(tabId, Boolean(isActive));
-      await updateTranslateContextMenuTitle(Boolean(isActive));
-    }
-
     // 兼容 MV3 (browser.action) 和 MV2 (browser.browserAction) 规范下的 Firefox 和 Chrome
     if (browser.action) {
       await browser.action.setIcon({ path, tabId });
@@ -678,11 +667,16 @@ browser.commands?.onCommand?.addListener?.((command) => {
  * 触发时，通过 Chrome 消息管道将对应指令转发给用户所点击页面的前台 Content Script。
  */
 browser?.contextMenus?.onClicked?.addListener?.(
-  ({ menuItemId, selectionText }) => {
+  async ({ menuItemId, selectionText }, tab) => {
     switch (menuItemId) {
-      case CMD_TOGGLE_TRANSLATE:
-        sendTabMsg(MSG_TRANS_TOGGLE);
+      case CMD_TOGGLE_TRANSLATE: {
+        const hasTranslation = await syncTranslateContextMenuTitle(tab);
+        await sendTabMsg(MSG_TRANS_TOGGLE, {
+          enabled: !hasTranslation,
+          transOnly: "true",
+        });
         break;
+      }
       case CMD_TOGGLE_TRANSLATE_ONLY:
         sendTabMsg(MSG_TRANS_TOGGLE_ONLY);
         break;
@@ -705,16 +699,6 @@ browser?.contextMenus?.onClicked?.addListener?.(
 
 browser?.contextMenus?.onShown?.addListener?.((_info, tab) => {
   syncTranslateContextMenuTitle(tab);
-});
-
-browser?.tabs?.onRemoved?.addListener?.((tabId) => {
-  translationStateByTab.delete(tabId);
-});
-
-browser?.tabs?.onUpdated?.addListener?.((tabId, changeInfo) => {
-  if (changeInfo?.status === "loading") {
-    translationStateByTab.delete(tabId);
-  }
 });
 
 /**

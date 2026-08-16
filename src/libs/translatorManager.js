@@ -580,6 +580,7 @@ export default class TranslatorManager {
     const response = result || {
       rule: this._translator?.rule || this.#rule,
       setting: this._translator?.setting || this.#setting,
+      hasTranslation: this._translator?.hasTranslation || false,
     };
     sendResponse(response);
     return true;
@@ -673,9 +674,17 @@ export default class TranslatorManager {
           if (args.enabled && args.transOnly === "true") {
             this._translator?.updateRule({ transOnly: "true" });
           }
-          args.enabled
-            ? this._translator?.enable()
-            : this._translator?.disable();
+          if (args.enabled) {
+            if (this._translator?.rule?.transOpen === "true") {
+              if (!this._translator.hasTranslation) {
+                this._translator.rescan();
+              }
+            } else {
+              this._translator?.enable();
+            }
+          } else {
+            this._translator?.disable();
+          }
         } else {
           if (this._translator?.rule?.transOpen !== "true") {
             this._translator?.updateRule({ transOnly: "true" });
