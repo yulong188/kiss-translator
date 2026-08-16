@@ -80,9 +80,11 @@ async function syncTranslateContextMenuTitle(tab) {
   }
 
   try {
-    const response = await browser.tabs.sendMessage(tabId, {
-      action: MSG_TRANS_GETRULE,
-    });
+    const response = await browser.tabs.sendMessage(
+      tabId,
+      { action: MSG_TRANS_GETRULE },
+      { frameId: 0 }
+    );
     const hasTranslation = response?.hasTranslation === true;
     await updateTranslateContextMenuTitle(hasTranslation);
     return hasTranslation;
