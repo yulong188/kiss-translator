@@ -44,6 +44,8 @@ import {
   defaultTradeEnglishUserPrompt,
   defaultSubtitlePrompt,
   defaultSystemPrompt,
+  defaultSystemPromptLines,
+  defaultSystemPromptXml,
 } from "./api";
 import { I18N, UI_LANGS } from "./i18n";
 
@@ -482,9 +484,33 @@ describe("prompt settings", () => {
       'NEVER translate "tank" as "坦克"'
     );
     expect(defaultB2BSelectionPrompt).toContain("Incoterms");
+    expect(defaultB2BSelectionPrompt).toContain(
+      "CIF means Cost, Insurance and Freight"
+    );
+    expect(defaultB2BSelectionPrompt).toContain("FOB means Free on Board");
+    expect(defaultB2BSelectionPrompt).toContain(
+      "Translate geographic names as proper nouns"
+    );
     expect(defaultB2BSelectionPrompt).toContain("Output only");
     expect(defaultB2BSelectionUserPrompt).toContain(
       "Surrounding paragraph or product card: {{context}}"
     );
+  });
+
+  test("applies B2B terminology, geography, and continuity rules to every AI translation mode", () => {
+    [
+      defaultNobatchPrompt,
+      defaultSystemPrompt,
+      defaultSystemPromptXml,
+      defaultSystemPromptLines,
+    ].forEach((prompt) => {
+      expect(prompt).toContain("CIF means Cost, Insurance and Freight");
+      expect(prompt).toContain("FOB means Free on Board");
+      expect(prompt).toContain("Translate geographic names as proper nouns");
+      expect(prompt).toContain(
+        "Treat adjacent ordered segments as parts of the same page"
+      );
+      expect(prompt).toContain("subject-verb agreement");
+    });
   });
 });

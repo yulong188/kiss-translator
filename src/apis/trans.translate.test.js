@@ -1293,6 +1293,51 @@ describe("handleTranslate", () => {
     expect(body.messages[0].content).not.toContain("Doc context");
   });
 
+  test("includes the document summary in an aggregated AI translation request", async () => {
+    fetchData.mockResolvedValueOnce({
+      choices: [
+        {
+          message: {
+            content:
+              '{"translations":[{"id":0,"text":"FOB 青岛","sourceLanguage":"en"}]}',
+          },
+        },
+      ],
+    });
+
+    await collectAsyncGenerator(
+      handleTranslate(["FOB Qingdao"], {
+        from: "en",
+        to: "zh-CN",
+        fromLang: "English",
+        toLang: "Chinese",
+        langMap: () => "",
+        glossary: {},
+        apiSetting: {
+          ...getApiSetting(OPT_TRANS_OPENAI),
+          useStream: false,
+        },
+        usePool: false,
+        docInfo: {
+          title: "Quotation",
+          description: "Export offer",
+          summary: "Industrial equipment quotation for a buyer in Germany",
+        },
+      })
+    );
+
+    const body = JSON.parse(fetchData.mock.calls[0][1].body);
+    const userPrompt = JSON.parse(
+      body.messages[body.messages.length - 1].content
+    );
+
+    expect(userPrompt).toMatchObject({
+      title: "Quotation",
+      description: "Export offer",
+      summary: "Industrial equipment quotation for a buyer in Germany",
+    });
+  });
+
   test("replaces external docInfo placeholders in user prompt", async () => {
     fetchData.mockResolvedValueOnce({
       choices: [{ message: { content: "你好" } }],

@@ -185,6 +185,7 @@ const genUserPrompt = ({
 
     title && (promptObj.title = title);
     description && (promptObj.description = description);
+    summary && (promptObj.summary = summary);
 
     Object.keys(glossary).length !== 0 && (promptObj.glossary = glossary);
     tone && (promptObj.tone = tone);

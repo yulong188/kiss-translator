@@ -1128,7 +1128,17 @@ Object.entries(OPT_LANGS_TO_SPEC).forEach(([t, m]) => {
   OPT_LANGS_TO_CODE[apiType].set("ZH", "zh-CN");
 });
 
-export const defaultNobatchPrompt = `You are a professional, authentic machine translation engine.`;
+const defaultB2BTranslationQualityRules = `B2B translation quality rules:
+- Determine meaning from source grammar, collocations, the complete ordered input, page context, and established industrial usage. Never translate an isolated word sense when the sentence or page supplies a more specific meaning.
+- Treat adjacent ordered segments as parts of the same page. Use them to resolve split sentences, pronouns, omitted subjects, tense, product names, and terminology. Keep the same product, company, person, and place translated consistently throughout the request.
+- Treat Incoterms as exact commercial terms. CIF means Cost, Insurance and Freight (成本、保险费加运费); FOB means Free on Board (船上交货). Preserve codes such as CIF, FOB, EXW, FCA, CFR, DAP, DDP, the named place/port, and editions such as Incoterms 2020. Translate the surrounding sentence naturally, but never translate "free" literally, confuse FOB with free shipping, confuse CIF with a generic freight charge, swap one rule for another, or invent included costs.
+- Translate geographic names as proper nouns, not word by word. Chinese to English: use the established official English name or standard Hanyu Pinyin with consistent capitalization and administrative hierarchy (for example, 青岛市, 山东省 -> Qingdao, Shandong Province). English to Chinese: use the established Chinese place name. Preserve address order appropriate to the target language, and never alter a named place attached to an Incoterm.
+- Preserve brands, company names with an established form, product models, materials, grades, quantities, dimensions, units, standards, currencies, chemical formulas, and technical qualifiers. Do not invent specifications, locations, certifications, or commercial commitments.
+- Produce complete, idiomatic target-language sentences rather than source-order calques. For Chinese to English, reconstruct articles, singular/plural, tense, prepositions, modifier order, subject-verb agreement, and punctuation. For English to Chinese, use concise natural professional Chinese and preserve every clause and logical relation.`;
+
+export const defaultNobatchPrompt = `You are a professional B2B and industrial machine translation engine.
+
+${defaultB2BTranslationQualityRules}`;
 export const defaultNobatchUserPrompt = `# Context
 Title: ${INPUT_PLACE_TITLE}
 Description: ${INPUT_PLACE_DESCRIPTION}
@@ -1154,6 +1164,8 @@ export const defaultB2BSelectionPrompt = `You are a context-first B2B industrial
 Translate the complete selected source text faithfully. Cover every clause; never summarize or turn the result into a dictionary definition.
 
 Use evidence in this order: source grammar and collocations, surrounding paragraph/product card, page title/description/summary, then established industry usage. A nearby product name, material, specification, application, or buyer/supplier sentence is strong evidence.
+
+${defaultB2BTranslationQualityRules}
 
 Resolve ambiguous words by the current commercial and industrial context. In particular, NEVER translate "tank" as "坦克" unless there is explicit military, armored-vehicle, weapon, or battlefield evidence. In industrial contexts use the precise sense supported by the text, such as 储罐/罐体, 水箱 for water tank, 油箱 for fuel tank, or 压力罐 for pressure tank. Apply the same care to plant (工厂/装置/成套设备 vs. 植物), vessel (容器/压力容器 vs. 船舶), line (生产线/管线/产品系列), cylinder (气缸/油缸/钢瓶), and screen (筛网/筛分机 vs. 屏幕).
 
@@ -1186,7 +1198,7 @@ Output:
 {"translations":[{"id":1,"text":"...","sourceLanguage":"<detected>"}]}
 
 Rules:
-1.  Use title/description for context only; do not output them.
+1.  Use title/description/summary and the complete ordered segment list for context only; do not output context fields.
 2.  Keep id, order, and count of segments.
 3.  Preserve whitespace, HTML entities, and all HTML-like tags (e.g., <i1>, <a1>). Translate inner text only.
 4.  Highest priority: Follow 'glossary'. Use value for translation; if value is "", keep the key.
@@ -1194,6 +1206,8 @@ Rules:
 6.  Apply the specified tone to the translation.
 7.  Detect sourceLanguage for each segment.
 8.  Return empty or unchanged inputs as is.
+
+${defaultB2BTranslationQualityRules}
 
 Example:
 Input: {"targetLanguage":"zh-CN","segments":[{"id":1,"text":"A <b>React</b> component."}],"glossary":{"component":"组件","React":""}}
@@ -1218,8 +1232,10 @@ Rules:
 3.  **HTML & Whitespace**: Preserve all HTML tags (e.g., <b>, <span>, <br>) and whitespace exactly as they appear in the structure. Only translate the text content inside them.
 4.  **Glossary**: Highest priority. Use the glossary value for translation. If the value is "", keep the source term as is.
 5.  **Do Not Translate**: Content inside <code>, <pre>, text in backticks ("code"), and placeholders like {1}, {{1}}, [1], [[1]].
-6.  **Context**: Use the "title" and "description" fields to understand the context for better translation accuracy, but do not output them.
+6.  **Context**: Use the "title", "description", "summary", and complete ordered segment list to understand the context for better translation accuracy, but do not output context fields.
 7.  **Tone**: Apply the specified "tone" (formal/casual).
+
+${defaultB2BTranslationQualityRules}
 
 Example:
 Input:
@@ -1245,11 +1261,13 @@ Rules:
 2.  **ID Mapping**: You MUST copy the exact "id" from the input segment to the output line.
 3.  **Newline Handling**: If the translated text contains a newline, replace it with the HTML tag "<br>" to ensure it stays on a single line.
 4.  **Separator**: Use the pipe symbol " | " strictly to separate the ID and the text.
-5.  **Context**: Use title/description for context only; do not output them.
+5.  **Context**: Use title/description/summary and the complete ordered segment list for context only; do not output context fields.
 6.  **HTML/Tags**: Preserve whitespace, HTML entities, and all HTML-like tags (e.g., <i1>, <b>). Translate inner text only.
 7.  **Glossary**: Highest priority. Follow 'glossary'. Use value for translation; if value is "", keep the key.
 8.  **Do Not Translate**: content in <code>, <pre>, text enclosed in backticks, or placeholders like {1}, {{1}}, [1].
 9.  **Tone**: Apply the specified tone.
+
+${defaultB2BTranslationQualityRules}
 
 Example:
 Input: {"targetLanguage":"zh-CN","segments":[{"id":0,"text":"Hello."},{"id":1,"text":"Line 1\nLine 2"}],"glossary":{}}
@@ -1482,6 +1500,8 @@ You are a senior Chinese-speaking export sales trainer and business English lexi
 - Build a practical product vocabulary network around the target expression. Select real, commonly used English product terms for two groups: (a) closely related upstream, downstream, accessory, companion, or same-family products; and (b) products serving the same or a similar purpose but belonging to a different structure, installation form, material, subtype, or product category.
 - For each related product term, state its Chinese meaning, its product-category relationship to the target, and the practical difference in use. Do not return generic synonyms, isolated adjectives, overly broad category names, or unrelated keyword stuffing.
 - Resolve ambiguity with evidence in this order: [Target] grammar/collocations, [Context] surrounding paragraph or product card, document title/description/summary, then established industry usage.
+- Treat Incoterms precisely: CIF = Cost, Insurance and Freight (成本、保险费加运费) and FOB = Free on Board (船上交货). Preserve the uppercase code, named place/port, and edition; never confuse either rule with free shipping or a generic freight charge.
+- Translate geographic names as proper nouns. Use established Chinese names in Chinese and official English names or standard Hanyu Pinyin in English; never translate Chinese place-name characters literally or vary the same place across the answer.
 - Never translate "tank" as "坦克" unless the target or context explicitly concerns military equipment, armored vehicles, weapons, or battlefields. In industrial product contexts choose 储罐/罐体, 水箱, 油箱, 压力罐, or another supported container sense. Apply the same context-first judgment to plant, vessel, line, cylinder, and screen.
 - Use [Context] to resolve ambiguity. If no foreign-trade meaning exists, say it is general English and explain it honestly. Never invent a product, specification, or application.
 - Keep the card practical and concise. For a term or short phrase, keep the entire answer within 350 Chinese characters, use exactly 3 related product terms by default, and never exceed 4. Avoid repeating the same meaning across sections.
