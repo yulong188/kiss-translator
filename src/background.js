@@ -31,6 +31,7 @@ import {
   STOKEY_SEPARATE_WINDOW,
   PORT_STREAM_FETCH,
   MSG_UPDATE_ICON,
+  MSG_TRANS_GETRULE,
   MSG_SHA256,
 } from "./config";
 import {
@@ -53,6 +54,45 @@ import { sha256 } from "./libs/utils";
 globalThis.__KISS_CONTEXT__ = "background";
 
 let openingOptionsPage = false;
+
+async function updateTranslateContextMenuTitle(isActive) {
+  if (typeof browser?.contextMenus?.update !== "function") return;
+
+  const title = browser.i18n.getMessage(
+    isActive ? "disable_translate" : "toggle_translate"
+  );
+  if (!title) return;
+
+  try {
+    await browser.contextMenus.update(CMD_TOGGLE_TRANSLATE, { title });
+    await browser.contextMenus.refresh?.();
+  } catch (err) {
+    // 菜单关闭或尚未创建时无需中断后台流程。
+    kissLog("update translate context menu title", err);
+  }
+}
+
+async function syncTranslateContextMenuTitle(tab) {
+  const tabId = tab?.id;
+  if (!Number.isInteger(tabId)) {
+    await updateTranslateContextMenuTitle(false);
+    return false;
+  }
+
+  try {
+    const response = await browser.tabs.sendMessage(
+      tabId,
+      { action: MSG_TRANS_GETRULE },
+      { frameId: 0 }
+    );
+    const hasTranslation = response?.hasTranslation === true;
+    await updateTranslateContextMenuTitle(hasTranslation);
+    return hasTranslation;
+  } catch (err) {
+    await updateTranslateContextMenuTitle(false);
+    return false;
+  }
+}
 
 /**
  * Open the extension settings with the native API when available.
@@ -629,11 +669,16 @@ browser.commands?.onCommand?.addListener?.((command) => {
  * 触发时，通过 Chrome 消息管道将对应指令转发给用户所点击页面的前台 Content Script。
  */
 browser?.contextMenus?.onClicked?.addListener?.(
-  ({ menuItemId, selectionText }) => {
+  async ({ menuItemId, selectionText }, tab) => {
     switch (menuItemId) {
-      case CMD_TOGGLE_TRANSLATE:
-        sendTabMsg(MSG_TRANS_TOGGLE);
+      case CMD_TOGGLE_TRANSLATE: {
+        const hasTranslation = await syncTranslateContextMenuTitle(tab);
+        await sendTabMsg(MSG_TRANS_TOGGLE, {
+          enabled: !hasTranslation,
+          transOnly: "true",
+        });
         break;
+      }
       case CMD_TOGGLE_TRANSLATE_ONLY:
         sendTabMsg(MSG_TRANS_TOGGLE_ONLY);
         break;
@@ -653,6 +698,10 @@ browser?.contextMenus?.onClicked?.addListener?.(
     }
   }
 );
+
+browser?.contextMenus?.onShown?.addListener?.((_info, tab) => {
+  syncTranslateContextMenuTitle(tab);
+});
 
 /**
  * 专门处理 SSE/翻译大模型的流式数据请求通道。

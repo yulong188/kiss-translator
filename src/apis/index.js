@@ -617,6 +617,7 @@ const apiBuiltinAITranslate = async ({ text, from, to, apiSetting }) => {
  * @param {string} params.glossary 自定义词汇术语替换表
  * @param {Function} params.onStreamChunk 流式响应增量回调函数 (用于 SSE/LLM 翻译)
  * @param {Object} params.docInfo 视频/文档摘要等额外上下文环境数据
+ * @param {string} params.context 当前划词所在段落或产品卡片语境
  * @param {boolean} params.useCache 是否应用本地请求缓存 (默认 true)
  * @param {boolean} params.usePool 是否应用限制连接池 (默认 true)
  * @param {boolean} params.translateVariants 是否翻译同一语言的不同变体
@@ -632,6 +633,7 @@ export const apiTranslate = async ({
   glossary,
   onStreamChunk,
   docInfo,
+  context = "",
   useCache = true,
   usePool = true,
   translateVariants = true,
@@ -646,6 +648,13 @@ export const apiTranslate = async ({
   }
 
   const { apiType, apiSlug, useBatchFetch } = apiSetting;
+  const effectiveDocInfo = context
+    ? {
+        ...getDocInfo(),
+        ...(docInfo || {}),
+        context,
+      }
+    : docInfo;
   const langMap = OPT_LANGS_TO_SPEC[apiType] || OPT_LANGS_SPEC_DEFAULT;
   const fromMap = OPT_LANGS_FROM_SPEC[apiType] || langMap;
   const from = fromMap.get(fromLang);
@@ -664,6 +673,21 @@ export const apiTranslate = async ({
     getTranslatePromptCacheScope(apiSetting),
     glossary
   );
+  const contextSig = effectiveDocInfo?.context
+    ? (
+        await getCacheDigest(
+          [
+            effectiveDocInfo.title,
+            effectiveDocInfo.description,
+            effectiveDocInfo.summary,
+            effectiveDocInfo.context,
+          ]
+            .filter(Boolean)
+            .join("\n"),
+          PROMPT_CACHE_SALT
+        )
+      ).slice(0, 16)
+    : "";
   const cacheOpts = {
     apiSlug,
     text,
@@ -673,7 +697,10 @@ export const apiTranslate = async ({
     translateVariants,
     version: [v1, v2].join("."),
     promptSig,
-    ...(docInfo?.summary && { ctx: docInfo.summary.slice(0, 50) }),
+    ...(effectiveDocInfo?.summary && {
+      ctx: effectiveDocInfo.summary.slice(0, 50),
+    }),
+    ...(contextSig && { contextSig }),
   };
   const cacheInput = `${URL_CACHE_TRAN}?${queryString.stringify(cacheOpts)}`;
 
@@ -748,7 +775,7 @@ export const apiTranslate = async ({
       apiSetting,
       usePool,
       onStreamChunk,
-      docInfo,
+      docInfo: effectiveDocInfo,
       signal,
     });
   } else {
@@ -763,7 +790,7 @@ export const apiTranslate = async ({
       textFormat,
       apiSetting,
       usePool,
-      docInfo,
+      docInfo: effectiveDocInfo,
       onStreamChunk,
       signal,
     });

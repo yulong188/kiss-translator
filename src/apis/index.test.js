@@ -819,4 +819,43 @@ describe("apiTranslate non-batch stream", () => {
       isComplete: true,
     });
   });
+
+  test("adds webpage context to the request and cache identity", async () => {
+    async function* streamResult() {
+      yield { id: 0, result: ["储罐", "en"] };
+    }
+    handleTranslate.mockImplementationOnce(streamResult);
+    getHttpCachePolyfill.mockResolvedValueOnce(null);
+    const context =
+      "Water storage equipment: stainless steel tank, capacity 5000 L.";
+
+    const result = await apiTranslate({
+      text: "tank",
+      fromLang: "en",
+      toLang: "zh-CN",
+      apiSetting: {
+        ...getOpenAiApiSetting("context-first B2B prompt"),
+        useBatchFetch: false,
+      },
+      context,
+    });
+
+    expect(result.trText).toBe("储罐");
+    expect(handleTranslate).toHaveBeenCalledWith(
+      ["tank"],
+      expect.objectContaining({
+        docInfo: {
+          title: "Doc",
+          description: "Desc",
+          summary: "Summary",
+          context,
+        },
+      })
+    );
+    expect(getHttpCachePolyfill.mock.calls[0][0]).toContain("contextSig=");
+    expect(mockGetCacheDigest).toHaveBeenCalledWith(
+      expect.stringContaining(context),
+      "prompt-cache"
+    );
+  });
 });

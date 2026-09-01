@@ -1,8 +1,18 @@
 import IconButton from "@mui/material/IconButton";
 import VolumeUpIcon from "@mui/icons-material/VolumeUp";
+import PauseIcon from "@mui/icons-material/Pause";
+import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import { useState } from "react";
 import { useAudio } from "../../hooks/Audio";
-import { canSpeak, speak } from "../../libs/speech";
+import {
+  canSpeak,
+  pauseSpeech,
+  resolveSpeechLanguage,
+  resumeSpeech,
+  speak,
+  stopSpeech,
+} from "../../libs/speech";
+import { useI18n } from "../../hooks/I18n";
 import queryString from "query-string";
 
 /**
@@ -57,34 +67,67 @@ export function BaiduAudioBtn({ text, lan = "uk", spd = 3 }) {
   return <AudioBtn src={src} />;
 }
 
-export function BrowserTtsBtn({ text, lang = "en-US" }) {
-  const [speaking, setSpeaking] = useState(false);
+export function BrowserTtsBtn({
+  text,
+  lang = "auto",
+  enabled = true,
+  englishAccent = "en-US",
+  rate = 1,
+  title,
+}) {
+  const i18n = useI18n();
+  const [status, setStatus] = useState("idle");
 
-  if (!text?.trim() || !canSpeak()) return null;
+  if (!enabled || !text?.trim() || !canSpeak()) return null;
 
   const handleSpeak = () => {
-    if (speaking) return;
+    if (status === "speaking") {
+      if (pauseSpeech()) setStatus("paused");
+      return;
+    }
+    if (status === "paused") {
+      if (resumeSpeech()) setStatus("speaking");
+      return;
+    }
 
-    // 浏览器内置 TTS 没有 audio 元素，因此由按钮自身维护播放状态。
-    setSpeaking(true);
-    const started = speak(text, lang, {
-      onEnd: () => setSpeaking(false),
-    });
+    // 新朗读会停止上一处声音，保证原文、译文和学习卡不会同时播放。
+    stopSpeech();
+    setStatus("speaking");
+    const started = speak(
+      text,
+      resolveSpeechLanguage(text, lang, englishAccent),
+      { onEnd: () => setStatus("idle") },
+      { rate }
+    );
 
     if (!started) {
-      setSpeaking(false);
+      setStatus("idle");
     }
   };
 
+  const dynamicTitle =
+    status === "speaking"
+      ? i18n("pause_speech", "暂停朗读")
+      : status === "paused"
+        ? i18n("resume_speech", "继续朗读")
+        : title || i18n("speak", "朗读");
+  const Icon =
+    status === "speaking"
+      ? PauseIcon
+      : status === "paused"
+        ? PlayArrowIcon
+        : VolumeUpIcon;
+
   return (
     <IconButton
-      color={speaking ? "primary" : "default"}
-      // 对齐默认词典按钮：播放中高亮，并忽略重复点击。
-      onClick={speaking ? undefined : handleSpeak}
+      color={status === "idle" ? "default" : "primary"}
+      onClick={handleSpeak}
       size="small"
       sx={{ ml: 0.5, verticalAlign: "middle" }}
+      title={dynamicTitle}
+      aria-label={dynamicTitle}
     >
-      <VolumeUpIcon fontSize="inherit" />
+      <Icon fontSize="inherit" />
     </IconButton>
   );
 }

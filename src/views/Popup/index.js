@@ -120,6 +120,9 @@ export function Trantab({ isSeparate = false }) {
       toLang2,
       aiDictApiSlug,
       aiDictPromptSlug,
+      ttsEnabled = true,
+      ttsEnglishAccent = "en-US",
+      ttsRate = 1,
     },
     transApis,
     langDetector,
@@ -149,6 +152,9 @@ export function Trantab({ isSeparate = false }) {
         enSug={enSug}
         aiDictApiSlug={aiDictApiSlug}
         aiDictPromptSlug={aiDictPromptSlug}
+        ttsEnabled={ttsEnabled}
+        ttsEnglishAccent={ttsEnglishAccent}
+        ttsRate={ttsRate}
         prompts={prompts}
         translateVariants={translateVariants}
         autoFocusInput={autoFocusInput}

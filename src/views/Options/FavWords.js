@@ -76,8 +76,17 @@ function FavAccordion({ word, index, tranboxSetting, transApis, prompts }) {
   // 控制当前手风琴展开与收起状态
   const [expanded, setExpanded] = useState(false);
   // 提取配置中用户选择的查词词典 (enDict) 和联想源 (enSug)
-  const { enDict, enSug, aiDictApiSlug, aiDictPromptSlug, fromLang, toLang } =
-    tranboxSetting || DEFAULT_TRANBOX_SETTING;
+  const {
+    enDict,
+    enSug,
+    aiDictApiSlug,
+    aiDictPromptSlug,
+    fromLang,
+    toLang,
+    ttsEnabled = true,
+    ttsEnglishAccent = "en-US",
+    ttsRate = 1,
+  } = tranboxSetting || DEFAULT_TRANBOX_SETTING;
   const i18n = useI18n();
   const [dictTab, setDictTab] = useState("default");
   const isWord = useMemo(() => isValidWord(word), [word]);
@@ -152,6 +161,9 @@ function FavAccordion({ word, index, tranboxSetting, transApis, prompts }) {
                         speechLang={fromLang}
                         toLang={toLang}
                         apiSetting={aiDictApiSetting}
+                        ttsEnabled={ttsEnabled}
+                        ttsEnglishAccent={ttsEnglishAccent}
+                        ttsRate={ttsRate}
                       />
                     )}
                   </>

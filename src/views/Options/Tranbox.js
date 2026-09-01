@@ -106,6 +106,9 @@ export default function Tranbox() {
     tradeTermLearning = true,
     tradeTermApiSlug = "DeepSeek",
     tradeTermPromptSlug = DEFAULT_TRADE_TERM_PROMPT_SLUG,
+    ttsEnabled = true,
+    ttsEnglishAccent = "en-US",
+    ttsRate = 1,
     blacklist = "",
     skipLangs = [],
   } = tranboxSetting;
@@ -410,6 +413,53 @@ export default function Tranbox() {
                         {getPromptDisplayName(prompt, i18n)}
                       </MenuItem>
                     ))}
+                  </TextField>
+                </Grid>
+              </>
+            )}
+            <Grid item xs={12} sm={12} md={6} lg={3}>
+              <TextField
+                fullWidth
+                select
+                size="small"
+                name="ttsEnabled"
+                value={ttsEnabled}
+                label={i18n("smart_tts")}
+                onChange={handleChange}
+              >
+                <MenuItem value={false}>{i18n("disable")}</MenuItem>
+                <MenuItem value={true}>{i18n("enable")}</MenuItem>
+              </TextField>
+            </Grid>
+            {ttsEnabled && (
+              <>
+                <Grid item xs={12} sm={12} md={6} lg={3}>
+                  <TextField
+                    fullWidth
+                    select
+                    size="small"
+                    name="ttsEnglishAccent"
+                    value={ttsEnglishAccent}
+                    label={i18n("tts_english_accent")}
+                    onChange={handleChange}
+                  >
+                    <MenuItem value="en-US">{i18n("tts_accent_us")}</MenuItem>
+                    <MenuItem value="en-GB">{i18n("tts_accent_uk")}</MenuItem>
+                  </TextField>
+                </Grid>
+                <Grid item xs={12} sm={12} md={6} lg={3}>
+                  <TextField
+                    fullWidth
+                    select
+                    size="small"
+                    name="ttsRate"
+                    value={ttsRate}
+                    label={i18n("tts_rate")}
+                    onChange={handleChange}
+                  >
+                    <MenuItem value={0.75}>0.75×</MenuItem>
+                    <MenuItem value={1}>1.0×</MenuItem>
+                    <MenuItem value={1.25}>1.25×</MenuItem>
                   </TextField>
                 </Grid>
               </>

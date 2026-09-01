@@ -50,6 +50,13 @@ describe("Tranbox language defaults", () => {
     });
 
     expect(container.querySelector("input[name='skipLangs']").value).toBe("");
+    expect(container.querySelector("input[name='ttsEnabled']").value).toBe(
+      "true"
+    );
+    expect(
+      container.querySelector("input[name='ttsEnglishAccent']").value
+    ).toBe("en-US");
+    expect(container.querySelector("input[name='ttsRate']").value).toBe("1");
 
     act(() => {
       root.unmount();

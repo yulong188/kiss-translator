@@ -21,6 +21,42 @@ export const getCurTabId = async () => {
   return tab?.id;
 };
 
+const CONTENT_SCRIPT_FILE = "content.js";
+const CONTENT_SCRIPT_READY_DELAYS = [0, 50, 150, 300];
+
+const isMissingMessageReceiver = (err) =>
+  err?.message?.includes("Could not establish connection") ||
+  err?.message?.includes("Receiving end does not exist");
+
+const wait = (milliseconds) =>
+  new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+async function retryTabMessage(tabId, message) {
+  for (const delay of CONTENT_SCRIPT_READY_DELAYS) {
+    if (delay) await wait(delay);
+
+    try {
+      return await browser.tabs.sendMessage(tabId, message);
+    } catch (err) {
+      if (!isMissingMessageReceiver(err)) throw err;
+    }
+  }
+
+  return null;
+}
+
+async function restoreContentScript(tabId) {
+  if (typeof browser?.scripting?.executeScript !== "function") return false;
+
+  await browser.scripting.executeScript({
+    // 先恢复顶层页面即可建立弹窗通信；allFrames 可能因单个受限 iframe
+    // 让整次注入 Promise 失败，造成主页面已经注入却仍被判定为不可用。
+    target: { tabId },
+    files: [CONTENT_SCRIPT_FILE],
+  });
+  return true;
+}
+
 /**
  * 向扩展后台 Service Worker (Background) 发送单向或双向消息。
  * REVIEW: 该方法依赖 `browser?.runtime` API，只能在浏览器扩展环境（Content Script, Popup, Options 等）下工作。
@@ -40,21 +76,33 @@ export const sendBgMsg = (action, args) =>
  */
 export const sendTabMsg = async (action, args) => {
   const tabId = await getCurTabId();
-  if (!tabId) return;
+  if (!tabId) return null;
 
-  // 向指定 ID 的标签页发送消息，并捕获常见的由于注入未就绪产生的错误
-  return browser.tabs.sendMessage(tabId, { action, args }).catch((err) => {
-    // REVIEW: 屏蔽两种常见的无害通信错误：
-    // 1. "Could not establish connection" (多发于前台 content script 尚未加载完毕或无响应)
-    // 2. "Receiving end does not exist" (常见于用户在不支持注入扩展的浏览器内置特权页面如 chrome:// 上触发了消息)
-    // 此处静默返回，避免未就绪的通信异常打断业务逻辑调用链或污染扩展错误页。
+  const message = { action, args };
+
+  try {
+    return await browser.tabs.sendMessage(tabId, message);
+  } catch (err) {
+    if (!isMissingMessageReceiver(err)) throw err;
+  }
+
+  // 本地扩展更新后，已经打开的页面不会自动加载新版本 content.js。
+  // 先短暂等待页面自身初始化；仍无接收端时主动补注入并重试。
+  const lateResponse = await retryTabMessage(tabId, message);
+  if (lateResponse !== null) return lateResponse;
+
+  try {
+    if (!(await restoreContentScript(tabId))) return null;
+    return await retryTabMessage(tabId, message);
+  } catch (err) {
+    // chrome://、商店页等受限页面无法注入，维持原有的安全静默行为。
+    if (isMissingMessageReceiver(err)) return null;
     if (
-      err?.message?.includes("Could not establish connection") ||
-      err?.message?.includes("Receiving end does not exist")
+      err?.message?.includes("Cannot access") ||
+      err?.message?.includes("The extensions gallery cannot be scripted")
     ) {
-      return;
-    } else {
-      throw err;
+      return null;
     }
-  });
+    throw err;
+  }
 };

@@ -24,6 +24,25 @@ function normalizeLang(lang) {
   return value;
 }
 
+/**
+ * 根据文本、检测语言和英语口音偏好选取系统 TTS 语言。
+ */
+export function resolveSpeechLanguage(
+  text,
+  lang = "auto",
+  englishAccent = "en-US"
+) {
+  const normalized = String(lang || "auto").replace(/_/g, "-");
+  const lower = normalized.toLowerCase();
+
+  if (lower === "en" || lower.startsWith("en-")) return englishAccent;
+  if (!["", "auto", "detect", "und", "unknown"].includes(lower)) {
+    return normalized;
+  }
+
+  return /[\u3400-\u9fff]/.test(text || "") ? "zh-CN" : englishAccent;
+}
+
 function hasChromeTts() {
   return typeof globalThis.chrome?.tts?.speak === "function";
 }
@@ -42,13 +61,18 @@ const FINAL_CHROME_TTS_EVENTS = new Set([
   "error",
 ]);
 
+let activeSpeechEnd = null;
+
 // Web Speech 通过 utterance 事件通知结束，不会返回可监听的播放句柄。
-function speakWithWebSpeech(text, lang, callbacks = {}) {
+function speakWithWebSpeech(text, lang, callbacks = {}, options = {}) {
   if (!hasWebSpeech()) return false;
 
   try {
     const utterance = new globalThis.SpeechSynthesisUtterance(text);
     utterance.lang = lang;
+    utterance.rate = options.rate ?? 1;
+    utterance.pitch = options.pitch ?? 1;
+    utterance.volume = options.volume ?? 1;
     utterance.onend = callbacks.onEnd;
     utterance.onerror = callbacks.onEnd;
     globalThis.speechSynthesis.speak(utterance);
@@ -62,7 +86,7 @@ export function canSpeak() {
   return hasChromeTts() || hasWebSpeech();
 }
 
-export function speak(text, lang = "en-US", callbacks = {}) {
+export function speak(text, lang = "en-US", callbacks = {}, options = {}) {
   const utteranceText = text?.trim();
   if (!utteranceText) return false;
 
@@ -73,35 +97,93 @@ export function speak(text, lang = "en-US", callbacks = {}) {
   const onEnd = () => {
     if (ended) return;
     ended = true;
+    if (activeSpeechEnd === onEnd) activeSpeechEnd = null;
     callbacks.onEnd?.();
   };
 
+  // 直接调用 speak 也遵循单实例播放；同时让上一处按钮恢复空闲状态。
+  activeSpeechEnd?.();
+  activeSpeechEnd = onEnd;
+
   if (hasChromeTts()) {
     try {
-      globalThis.chrome.tts.speak(
-        utteranceText,
-        {
-          lang: normalizedLang,
-          onEvent: (event) => {
-            if (FINAL_CHROME_TTS_EVENTS.has(event?.type)) {
-              onEnd();
-            }
-          },
+      const ttsOptions = {
+        lang: normalizedLang,
+        rate: options.rate ?? 1,
+        pitch: options.pitch ?? 1,
+        volume: options.volume ?? 1,
+        onEvent: (event) => {
+          if (FINAL_CHROME_TTS_EVENTS.has(event?.type)) {
+            onEnd();
+          }
         },
-        () => {
-          // 读取 lastError，避免 Chrome 控制台出现 Unchecked runtime.lastError。
-          if (globalThis.chrome?.runtime?.lastError) {
-            if (!speakWithWebSpeech(utteranceText, normalizedLang, { onEnd })) {
-              onEnd();
-            }
+      };
+      globalThis.chrome.tts.speak(utteranceText, ttsOptions, () => {
+        // 读取 lastError，避免 Chrome 控制台出现 Unchecked runtime.lastError。
+        if (globalThis.chrome?.runtime?.lastError) {
+          if (
+            !speakWithWebSpeech(
+              utteranceText,
+              normalizedLang,
+              { onEnd },
+              options
+            )
+          ) {
+            onEnd();
           }
         }
-      );
+      });
       return true;
     } catch (err) {
-      return speakWithWebSpeech(utteranceText, normalizedLang, { onEnd });
+      const started = speakWithWebSpeech(
+        utteranceText,
+        normalizedLang,
+        { onEnd },
+        options
+      );
+      if (!started) onEnd();
+      return started;
     }
   }
 
-  return speakWithWebSpeech(utteranceText, normalizedLang, { onEnd });
+  const started = speakWithWebSpeech(
+    utteranceText,
+    normalizedLang,
+    { onEnd },
+    options
+  );
+  if (!started) onEnd();
+  return started;
+}
+
+export function stopSpeech() {
+  globalThis.chrome?.tts?.stop?.();
+  globalThis.speechSynthesis?.cancel?.();
+  const onEnd = activeSpeechEnd;
+  activeSpeechEnd = null;
+  onEnd?.();
+}
+
+export function pauseSpeech() {
+  if (typeof globalThis.chrome?.tts?.pause === "function") {
+    globalThis.chrome.tts.pause();
+    return true;
+  }
+  if (typeof globalThis.speechSynthesis?.pause === "function") {
+    globalThis.speechSynthesis.pause();
+    return true;
+  }
+  return false;
+}
+
+export function resumeSpeech() {
+  if (typeof globalThis.chrome?.tts?.resume === "function") {
+    globalThis.chrome.tts.resume();
+    return true;
+  }
+  if (typeof globalThis.speechSynthesis?.resume === "function") {
+    globalThis.speechSynthesis.resume();
+    return true;
+  }
+  return false;
 }

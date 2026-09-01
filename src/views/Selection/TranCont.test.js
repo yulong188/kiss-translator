@@ -34,6 +34,25 @@ jest.mock("./CopyBtn", () => {
     );
 });
 
+jest.mock("./AudioBtn", () => {
+  const React = require("react");
+
+  return {
+    BrowserTtsBtn: ({ text, lang, enabled, englishAccent, rate }) =>
+      text
+        ? React.createElement("button", {
+            type: "button",
+            "data-testid": "translation-tts",
+            "data-text": text,
+            "data-lang": lang,
+            "data-enabled": String(enabled),
+            "data-accent": englishAccent,
+            "data-rate": String(rate),
+          })
+        : null,
+  };
+});
+
 /**
  * 创建一个可由测试主动 resolve/reject 的 Promise。
  *
@@ -153,6 +172,7 @@ describe("TranCont", () => {
       });
     });
     expect(textarea.value).toBe("阶段译文");
+    expect(container.querySelector('[role="progressbar"]')).toBeNull();
 
     await act(async () => {
       deferred.resolve({ trText: "最终译文" });
@@ -218,6 +238,42 @@ describe("TranCont", () => {
     act(() => {
       root.unmount();
     });
+  });
+
+  test("passes the selected webpage context to the translation gateway", async () => {
+    apiTranslate.mockResolvedValueOnce({ trText: "储罐" });
+    const context =
+      "Water storage equipment: stainless steel tank, capacity 5000 L.";
+
+    const { root } = renderTranCont({ text: "tank", context });
+    await flushEffects();
+
+    expect(apiTranslate).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "tank", context })
+    );
+
+    act(() => root.unmount());
+  });
+
+  test("reads the translated result with the shared voice settings", async () => {
+    apiTranslate.mockResolvedValueOnce({ trText: "storage tank" });
+
+    const { container, root } = renderTranCont({
+      toLang: "en",
+      ttsEnglishAccent: "en-GB",
+      ttsRate: 1.25,
+    });
+    await flushEffects();
+
+    const speechButton = container.querySelector(
+      "[data-testid='translation-tts']"
+    );
+    expect(speechButton.dataset.text).toBe("storage tank");
+    expect(speechButton.dataset.lang).toBe("en");
+    expect(speechButton.dataset.accent).toBe("en-GB");
+    expect(speechButton.dataset.rate).toBe("1.25");
+
+    act(() => root.unmount());
   });
 
   test("removes whitespace around Google line breaks", async () => {

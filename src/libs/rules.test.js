@@ -29,6 +29,10 @@ test("uses Microsoft as the default webpage translator", () => {
   expect(GLOBLA_RULE.apiSlug).toBe(OPT_TRANS_MICROSOFT);
 });
 
+test("hides the original text by default for webpage translation", () => {
+  expect(GLOBLA_RULE.transOnly).toBe("true");
+});
+
 test("keeps an explicitly stored Tencent global rule", async () => {
   getDisabledSubRules.mockResolvedValue([]);
   getRulesWithDefault.mockResolvedValue([

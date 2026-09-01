@@ -1,7 +1,7 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { apiDict } from "../../apis";
-import TradeTermCont from "./TradeTermCont";
+import TradeTermCont, { extractTradeEnglishExpression } from "./TradeTermCont";
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -22,6 +22,24 @@ jest.mock("./CopyBtn", () => {
   const React = require("react");
   return ({ text }) =>
     React.createElement("button", { "data-copy-text": text }, "copy");
+});
+
+jest.mock("./AudioBtn", () => {
+  const React = require("react");
+  return {
+    BrowserTtsBtn: ({ text, lang, enabled, englishAccent, rate }) =>
+      text
+        ? React.createElement("button", {
+            type: "button",
+            "data-testid": "trade-tts",
+            "data-text": text,
+            "data-lang": lang,
+            "data-enabled": String(enabled),
+            "data-accent": englishAccent,
+            "data-rate": String(rate),
+          })
+        : null,
+  };
 });
 
 async function flushEffects() {
@@ -60,6 +78,34 @@ describe("TradeTermCont", () => {
   beforeEach(() => {
     apiDict.mockReset();
     document.body.innerHTML = "";
+  });
+
+  test.each([
+    ["**核心英文表达**：`storage tank`", "storage tank"],
+    ["**推荐表达**: PVC hose", "PVC hose"],
+    ["没有目标字段", ""],
+  ])("extracts the English expression from %s", (markdown, expected) => {
+    expect(extractTradeEnglishExpression(markdown)).toBe(expected);
+  });
+
+  test("reads the core English expression with the shared voice settings", async () => {
+    apiDict.mockResolvedValueOnce(
+      "**B2B整句译文**：储罐\n\n**核心英文表达**：`storage tank`"
+    );
+
+    const { container, root } = renderTradeTermCont({
+      ttsEnglishAccent: "en-GB",
+      ttsRate: 0.75,
+    });
+    await flushEffects();
+
+    const speechButton = container.querySelector("[data-testid='trade-tts']");
+    expect(speechButton.dataset.text).toBe("storage tank");
+    expect(speechButton.dataset.lang).toBe("en");
+    expect(speechButton.dataset.accent).toBe("en-GB");
+    expect(speechButton.dataset.rate).toBe("0.75");
+
+    act(() => root.unmount());
   });
 
   test.each([

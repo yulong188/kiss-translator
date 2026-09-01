@@ -37,7 +37,7 @@ jest.mock("./AudioBtn", () => {
   const React = require("react");
 
   return {
-    BrowserTtsBtn: ({ text, lang }) =>
+    BrowserTtsBtn: ({ text, lang, enabled, englishAccent, rate }) =>
       React.createElement(
         "button",
         {
@@ -45,6 +45,9 @@ jest.mock("./AudioBtn", () => {
           "data-testid": "browser-tts",
           "data-text": text,
           "data-lang": lang,
+          "data-enabled": String(enabled),
+          "data-accent": englishAccent,
+          "data-rate": String(rate),
         },
         "speak"
       ),
@@ -137,6 +140,32 @@ describe("AiDictCont", () => {
     act(() => {
       root.unmount();
     });
+  });
+
+  test("uses shared voice settings and can hide its duplicate speech button", async () => {
+    apiDict.mockResolvedValueOnce("## library\n\n- book room");
+
+    const first = renderAiDictCont({
+      ttsEnabled: true,
+      ttsEnglishAccent: "en-GB",
+      ttsRate: 0.75,
+    });
+    await flushEffects();
+
+    const speechButton = first.container.querySelector(
+      "[data-testid='browser-tts']"
+    );
+    expect(speechButton.dataset.accent).toBe("en-GB");
+    expect(speechButton.dataset.rate).toBe("0.75");
+    act(() => first.root.unmount());
+
+    apiDict.mockResolvedValueOnce("## library\n\n- book room");
+    const second = renderAiDictCont({ showSpeechButton: false });
+    await flushEffects();
+    expect(
+      second.container.querySelector("[data-testid='browser-tts']")
+    ).toBeNull();
+    act(() => second.root.unmount());
   });
 
   test("does not render speech button without dictionary markdown", async () => {

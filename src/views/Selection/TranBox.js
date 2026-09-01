@@ -366,6 +366,9 @@ function TranBoxContent({
   tradeTermLearning,
   tradeTermApiSlug,
   tradeTermPromptSlug,
+  ttsEnabled,
+  ttsEnglishAccent,
+  ttsRate,
   prompts,
   selectionContext,
 }) {
@@ -431,6 +434,9 @@ function TranBoxContent({
         tradeTermApiSlug={tradeTermApiSlug}
         tradeTermPromptSlug={tradeTermPromptSlug}
         selectionContext={selectionContext}
+        ttsEnabled={ttsEnabled}
+        ttsEnglishAccent={ttsEnglishAccent}
+        ttsRate={ttsRate}
       />
     </Box>
   );
@@ -512,6 +518,11 @@ export default function TranBox(props) {
                 DEFAULT_TRADE_TERM_PROMPT_SLUG
               }
               selectionContext={props.selectionContext}
+              ttsEnabled={props.tranboxSetting.ttsEnabled !== false}
+              ttsEnglishAccent={
+                props.tranboxSetting.ttsEnglishAccent || "en-US"
+              }
+              ttsRate={props.tranboxSetting.ttsRate || 1}
             />
           </DraggableResizable>
         )}

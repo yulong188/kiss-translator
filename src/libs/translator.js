@@ -4072,6 +4072,17 @@ overflow-wrap: anywhere !important;`;
     return { ...this.#rule };
   }
 
+  get hasTranslation() {
+    const selector = `.${Translator.KISS_CLASS.warpper} > .${Translator.KISS_CLASS.inner}`;
+    return Array.from(this.#rootNodes).some((root) =>
+      Array.from(root.querySelectorAll?.(selector) || []).some(
+        (inner) =>
+          inner.textContent?.trim().length > 0 &&
+          !inner.querySelector(`.${Translator.KISS_CLASS.retry}`)
+      )
+    );
+  }
+
   get eventName() {
     return this.#eventName;
   }

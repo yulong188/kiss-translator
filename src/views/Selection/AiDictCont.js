@@ -40,6 +40,10 @@ export default function AiDictCont({
   toLang,
   apiSetting,
   context = "",
+  showSpeechButton = true,
+  ttsEnabled = true,
+  ttsEnglishAccent = "en-US",
+  ttsRate = 1,
 }) {
   const i18n = useI18n();
   const [markdown, setMarkdown] = useState("");
@@ -178,7 +182,16 @@ export default function AiDictCont({
           alignItems: "center",
         }}
       >
-        <BrowserTtsBtn text={text} lang={speechLang || fromLang || "en-US"} />
+        {showSpeechButton && (
+          <BrowserTtsBtn
+            text={text}
+            lang={speechLang || fromLang || "en-US"}
+            enabled={ttsEnabled}
+            englishAccent={ttsEnglishAccent}
+            rate={ttsRate}
+            title={i18n("speak_original")}
+          />
+        )}
         <CopyBtn text={markdown} title={i18n("copy")} />
       </Box>
       {loading && <CircularProgress size={12} sx={{ mr: 1 }} />}

@@ -220,6 +220,34 @@ describe("useSelectionController", () => {
     });
   });
 
+  test("includes product-card details when the selected term is in its heading", async () => {
+    const controller = renderController();
+    const productCard = document.createElement("div");
+    productCard.className = "product-card";
+    const heading = document.createElement("h3");
+    heading.textContent = "Industrial storage tank — ";
+    const details = document.createElement("p");
+    details.textContent =
+      "Stainless steel vessel for water and chemical storage, 5000 L.";
+    productCard.append(heading, details);
+    document.body.appendChild(productCard);
+
+    currentSelection = makeSelection("tank", heading);
+    await dispatchWindowMouseup();
+
+    act(() => {
+      controller.state.handleOpenTranbox();
+    });
+
+    expect(controller.state.textContext).toContain("Industrial storage tank");
+    expect(controller.state.textContext).toContain("Stainless steel vessel");
+    expect(controller.state.textContext).toContain("5000 L");
+
+    act(() => {
+      controller.root.unmount();
+    });
+  });
+
   test("keeps existing context when a later page mouseup has an empty selection", async () => {
     const controller = renderController();
     const pageParagraph = createParagraph("The library is open.");

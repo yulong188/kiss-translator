@@ -10,8 +10,16 @@ import ReactMarkdown from "react-markdown";
 import { apiDict } from "../../apis";
 import { useI18n } from "../../hooks/I18n";
 import CopyBtn from "./CopyBtn";
+import { BrowserTtsBtn } from "./AudioBtn";
 
 const pendingRequests = new Map();
+
+export function extractTradeEnglishExpression(markdown) {
+  const match = String(markdown || "").match(
+    /\*\*(?:核心英文表达|推荐表达)\*\*[：:]\s*`?([^`\n]+)`?/i
+  );
+  return match?.[1]?.replace(/[*_]/g, "").trim() || "";
+}
 
 function getRequestKey({ text, fromLang, apiSettingKey, context }) {
   return JSON.stringify({ text, fromLang, apiSettingKey, context });
@@ -26,6 +34,9 @@ export default function TradeTermCont({
   fromLang = "auto",
   apiSetting,
   context = "",
+  ttsEnabled = true,
+  ttsEnglishAccent = "en-US",
+  ttsRate = 1,
 }) {
   const i18n = useI18n();
   const [markdown, setMarkdown] = useState("");
@@ -34,6 +45,10 @@ export default function TradeTermCont({
   const apiSettingKey = useMemo(
     () => JSON.stringify(apiSetting || {}),
     [apiSetting]
+  );
+  const speechText = useMemo(
+    () => extractTradeEnglishExpression(markdown),
+    [markdown]
   );
 
   useEffect(() => {
@@ -146,7 +161,17 @@ export default function TradeTermCont({
           </Typography>
           {loading && !markdown && <CircularProgress size={12} />}
         </Stack>
-        <CopyBtn text={markdown} title={i18n("copy")} />
+        <Stack direction="row" alignItems="center">
+          <BrowserTtsBtn
+            text={speechText}
+            lang="en"
+            enabled={ttsEnabled}
+            englishAccent={ttsEnglishAccent}
+            rate={ttsRate}
+            title={i18n("speak_core_expression")}
+          />
+          <CopyBtn text={markdown} title={i18n("copy")} />
+        </Stack>
       </Stack>
 
       {error ? (

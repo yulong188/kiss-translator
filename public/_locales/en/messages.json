@@ -11,6 +11,9 @@
   "toggle_translate": {
     "message": "Toggle Translation"
   },
+  "disable_translate": {
+    "message": "Disable Translation"
+  },
   "toggle_translate_only": {
     "message": "Show translation only"
   },
